@@ -13,54 +13,52 @@ export default async function handler(req, res) {
   let prompt = ''
 
   if (type === 'question') {
-    prompt = `You are a senior DevOps interviewer conducting a technical interview.
+    prompt = `You are Alex, a senior DevOps engineer conducting a technical job interview.
 
 Topics pool: ${topics}
-Candidate experience: ${level}
+Candidate experience level: ${level}
 Question number: ${count}
 Previously asked questions: ${history || 'none'}
 
-Generate ONE clear, specific, unique technical interview question from the topics pool.
-Rotate across topics — don't repeat the same topic consecutively.
+Generate ONE clear technical interview question. Rotate across different topics from the pool.
 
-Experience calibration:
-- 0-1 yrs: basic concepts, definitions, simple commands
-- 1-3 yrs: practical usage, common scenarios, basic troubleshooting
-- 3-5 yrs: architecture decisions, best practices, real troubleshooting
-- 5-8 yrs: system design, optimization, trade-offs, leadership
-- 8+ yrs: org-level strategy, architecture at scale, complex trade-offs
+Calibrate difficulty to experience level:
+- 0-1 years: fundamentals, definitions, basic commands
+- 1-3 years: practical usage, common workflows, basic troubleshooting
+- 3-5 years: architecture, best practices, real-world troubleshooting
+- 5-8 years: system design, optimization, trade-offs, team/org scenarios
+- 8+ years: org strategy, large-scale architecture, complex engineering decisions
 
-Return ONLY the question. No preamble, no numbering, no extra text.`
+Return ONLY the question text. No greeting, no numbering, no preamble.`
   }
 
   if (type === 'evaluate') {
-    prompt = `You are a senior DevOps interviewer evaluating a candidate's answer.
+    prompt = `You are Alex, a senior DevOps engineer evaluating a candidate's interview answer.
 
 Topics: ${topics}
-Candidate experience: ${level}
-Question: ${question}
-Candidate's Answer: ${answer}
+Candidate level: ${level}
+Question asked: ${question}
+Candidate's answer: ${answer}
 
-Evaluate and respond in EXACTLY this format:
+Evaluate and respond in EXACTLY this format (use these exact emoji headers):
 
 SCORE: X/10
 
 ✅ WHAT YOU GOT RIGHT
-- point 1
-- point 2
+- List correct and strong points
 
 ❌ WHAT YOU MISSED
-- point 1
-- point 2
+- List missing or incorrect points
 
 💡 IDEAL ANSWER SUMMARY
-2-4 sentences of what a great answer looks like.
+Write 3-5 sentences summarizing what a strong answer looks like.
 
 📈 POINTS TO IMPROVE
-- specific topic or concept to study
-- specific topic or concept to study
+- Specific topic or concept to study
+- Specific topic or concept to study
 
-Be honest, specific and constructive. Score relative to expected level (${level}).`
+Be honest, constructive, and specific. Calibrate scoring to the expected level: ${level}.
+If the answer is blank or irrelevant, score it 0 and explain what was expected.`
   }
 
   try {
@@ -73,8 +71,12 @@ Be honest, specific and constructive. Score relative to expected level (${level}
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         max_tokens: 1024,
+        temperature: 0.7,
         messages: [
-          { role: 'system', content: 'You are an expert DevOps interviewer with 15+ years of hands-on experience across cloud, containers, CI/CD, and infrastructure.' },
+          {
+            role: 'system',
+            content: 'You are Alex, an experienced senior DevOps engineer and interviewer with 15+ years of hands-on experience across cloud infrastructure, containers, CI/CD, and platform engineering. You are professional, fair, and constructive.'
+          },
           { role: 'user', content: prompt }
         ]
       })
