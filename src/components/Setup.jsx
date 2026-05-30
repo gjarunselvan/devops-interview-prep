@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 const LEVELS = [
   { id: '0-1', label: '0–1 years', tag: 'Fresher',             color: '#16a34a' },
   { id: '1-3', label: '1–3 years', tag: 'Junior',              color: '#2563eb' },
@@ -36,14 +38,14 @@ const TIME_OPTIONS = [15, 30, 45, 60]
 export { LEVELS, TOPICS, Q_OPTIONS, TIME_OPTIONS }
 
 export default function Setup({ profile, onStart, onLogout }) {
-  const [level,       setLevel]       = window.React.useState(null)
-  const [topics,      setTopics]      = window.React.useState([])
-  const [customTopic, setCustomTopic] = window.React.useState('')
-  const [mode,        setMode]        = window.React.useState('text')
-  const [sessionType, setSessionType] = window.React.useState('questions')
-  const [qTarget,     setQTarget]     = window.React.useState(10)
-  const [timeTarget,  setTimeTarget]  = window.React.useState(30)
-  const [customQ,     setCustomQ]     = window.React.useState('')
+  const [level,       setLevel]       = useState(null)
+  const [topics,      setTopics]      = useState([])
+  const [customTopic, setCustomTopic] = useState('')
+  const [mode,        setMode]        = useState('text')
+  const [sessionType, setSessionType] = useState('questions')
+  const [qTarget,     setQTarget]     = useState(10)
+  const [timeTarget,  setTimeTarget]  = useState(30)
+  const [customQ,     setCustomQ]     = useState('')
 
   function toggleTopic(t) {
     setTopics(prev => prev.find(x => x.id === t.id) ? prev.filter(x => x.id !== t.id) : [...prev, t])

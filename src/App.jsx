@@ -25,14 +25,15 @@ export default function App() {
         setProfile(profile)
 
         // Check for incomplete session
-        const { data: incomplete } = await supabase
+        const { data: incompleteArr } = await supabase
           .from('sessions')
           .select('*')
           .eq('user_id', session.user.id)
           .eq('completed', false)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
+
+        const incomplete = incompleteArr?.[0]
 
         if (incomplete?.history?.length > 0) {
           // Ask user if they want to resume
