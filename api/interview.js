@@ -8,24 +8,27 @@ export default async function handler(req, res) {
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return res.status(500).json({ result: 'ERROR: GROQ_API_KEY is not set.' })
 
-  const { type, topic, level, question, answer, history, count } = req.body
+  const { type, topics, level, question, answer, history, count } = req.body
 
   let prompt = ''
 
   if (type === 'question') {
     prompt = `You are a senior DevOps interviewer conducting a technical interview.
 
-Topic: ${topic}
+Topics pool: ${topics}
 Candidate experience: ${level}
-Question number: ${count} of 5
-${history}
+Question number: ${count}
+Previously asked questions: ${history || 'none'}
 
-Generate ONE clear, specific technical interview question appropriate for this experience level and topic.
-- For 0-1 years: basic concepts and definitions
-- For 1-3 years: practical usage and common scenarios
-- For 3-5 years: architecture decisions, troubleshooting, best practices
-- For 5-8 years: system design, optimization, leadership scenarios
-- For 8+ years: architecture at scale, org strategy, complex trade-offs
+Generate ONE clear, specific, unique technical interview question from the topics pool.
+Rotate across topics — don't repeat the same topic consecutively.
+
+Experience calibration:
+- 0-1 yrs: basic concepts, definitions, simple commands
+- 1-3 yrs: practical usage, common scenarios, basic troubleshooting
+- 3-5 yrs: architecture decisions, best practices, real troubleshooting
+- 5-8 yrs: system design, optimization, trade-offs, leadership
+- 8+ yrs: org-level strategy, architecture at scale, complex trade-offs
 
 Return ONLY the question. No preamble, no numbering, no extra text.`
   }
@@ -33,30 +36,31 @@ Return ONLY the question. No preamble, no numbering, no extra text.`
   if (type === 'evaluate') {
     prompt = `You are a senior DevOps interviewer evaluating a candidate's answer.
 
-Topic: ${topic}
+Topics: ${topics}
 Candidate experience: ${level}
-
 Question: ${question}
-
 Candidate's Answer: ${answer}
 
-Evaluate the answer and respond in this exact format:
+Evaluate and respond in EXACTLY this format:
 
 SCORE: X/10
 
 ✅ WHAT YOU GOT RIGHT
-- List the correct points
+- point 1
+- point 2
 
 ❌ WHAT YOU MISSED
-- List important points that were missing or wrong
+- point 1
+- point 2
 
 💡 IDEAL ANSWER SUMMARY
-A concise 3-5 sentence summary of what a great answer looks like.
+2-4 sentences of what a great answer looks like.
 
-📚 STUDY TIP
-One specific resource or topic to study to improve on this.
+📈 POINTS TO IMPROVE
+- specific topic or concept to study
+- specific topic or concept to study
 
-Be honest, constructive and specific. Score based on the expected level (${level}).`
+Be honest, specific and constructive. Score relative to expected level (${level}).`
   }
 
   try {
@@ -68,9 +72,9 @@ Be honest, constructive and specific. Score based on the expected level (${level
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        max_tokens: 1000,
+        max_tokens: 1024,
         messages: [
-          { role: 'system', content: 'You are an expert DevOps interviewer with 15+ years of experience.' },
+          { role: 'system', content: 'You are an expert DevOps interviewer with 15+ years of hands-on experience across cloud, containers, CI/CD, and infrastructure.' },
           { role: 'user', content: prompt }
         ]
       })
