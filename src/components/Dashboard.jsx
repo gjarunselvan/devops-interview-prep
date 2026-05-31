@@ -78,6 +78,21 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
     await supabase.from('roadmaps').update({ content: newRoadmap }).eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1)
   }
 
+  function handleSurpriseMe() {
+    const mixedConfig = {
+      level: { tag: profile.experience_level || 'Mid-Level', label: profile.experience_level || 'Mid-Level' },
+      topics: [], 
+      topicList: 'Full DevOps Stack (Mixed Domains)',
+      mode: 'text',
+      sessionType: 'questions',
+      totalQ: 10,
+      studyTime: profile.study_daily_mins || 60,
+      interviewType: 'mixed',
+      difficulty: 'hard'
+    }
+    onStartSession(mixedConfig)
+  }
+
   const avgScore = sessions.length > 0 ? (sessions.reduce((acc, s) => acc + (s.avg_score || 0), 0) / sessions.length).toFixed(1) : '0.0'
   const improveHistory = sessions.flatMap(s => (s.improve_points || []).map(p => ({ text: p, date: new Date(s.created_at).toLocaleDateString(), sessionData: s }))).slice(0, 10)
   const meta = profile?.metadata || {}
@@ -215,7 +230,7 @@ const s = {
   logo:         { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
   navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
   navRight:     { display: 'flex', alignItems: 'center', gap: 15 },
-  navLinkBtn:   { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: 'var(--text2)' },
+  navLinkBtn:   { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)' },
   themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
   avatar:       { width: 32, height: 32, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 12 },
   navName:      { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
@@ -233,16 +248,16 @@ const s = {
   statBox:      { flex: 1 },
   statVal:      { fontSize: 32, fontWeight: 950, color: 'var(--text)', fontFamily: 'JetBrains Mono,monospace' },
   statLabel:    { fontSize: 9, fontWeight: 800, color: 'var(--muted)' },
-  xpBar:        { height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 15, overflow: 'hidden' },
+  xpBar:        { height: 6, background: 'rgba(255,255,255,0.15)', borderRadius: 3, marginTop: 15, overflow: 'hidden' },
   xpFill:       { height: '100%', background: 'var(--surface)' },
   improveList:  { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 15 },
   improveItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, cursor: 'pointer' },
   improveText:  { fontSize: 12, fontWeight: 700, color: 'var(--text2)' },
   improveDate:  { fontSize: 9, color: 'var(--muted)', marginTop: 3 },
   startBtn:     { padding: '20px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 16, fontWeight: 950, boxShadow: '0 8px 20px var(--primary-glow)', cursor: 'pointer' },
-  reBtn:        { padding: '10px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: 'pointer' },
+  reBtn:        { padding: '10px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)' },
   roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem' },
-  roadmapDay:   { minWidth: 200, borderLeft: '3px solid var(--primary-l)', paddingLeft: 14 },
+  roadmapDay:   { minWidth: 200, borderLeft: '2px solid var(--primary-l)', paddingLeft: 14 },
   dayTitle:     { fontSize: 10, fontWeight: 900, color: 'var(--primary)', marginBottom: 10, textTransform: 'uppercase' },
   taskItem:     { background: 'var(--surface2)', padding: '10px', borderRadius: 8, marginBottom: 8, transition: 'all 0.2s' },
   taskName:     { fontSize: 11, fontWeight: 800, color: 'var(--text2)' },

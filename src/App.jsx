@@ -41,8 +41,9 @@ export default function App() {
 
   // ABSOLUTE THEME SYNC
   useEffect(() => {
-    console.log('Applying theme:', theme)
-    document.documentElement.setAttribute('data-theme', theme)
+    console.log('Final applying theme to body:', theme)
+    document.body.setAttribute('data-theme', theme)
+    document.documentElement.setAttribute('data-theme', theme) // Set both for safety
     localStorage.setItem('theme', theme)
     if (bgColor) {
       document.documentElement.style.setProperty('--bg', bgColor)

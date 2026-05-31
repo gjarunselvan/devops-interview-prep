@@ -139,6 +139,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
 
         <div style={s.grid}>
           <div style={s.configPanel}>
+            {/* Seniority */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>01</span><div style={s.cardTitle}>Seniority Level</div></div>
               <div style={s.levelGrid}>
@@ -154,7 +155,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               <div style={{ marginTop: 16 }}>
                 <input 
                   type="number" 
-                  placeholder="Or enter custom years (e.g. 45)..." 
+                  placeholder="Or enter custom years of experience..." 
                   style={s.input} 
                   value={customYears} 
                   onChange={e => { setCustomYears(e.target.value); setLevel(null); }}
@@ -162,6 +163,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
+            {/* Track */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>02</span><div style={s.cardTitle}>Interview Track</div></div>
               <div style={s.typeStack}>
@@ -181,6 +183,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
+            {/* Tech Stack */}
             {(type !== 'behavioral' && type !== 'surprise') && (
               <div style={s.card}>
                 <div style={s.cardHeader}><span style={s.step}>03</span><div style={s.cardTitle}>Technical Focus</div></div>
@@ -231,6 +234,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
           </div>
 
           <div style={s.settingsPanel}>
+            {/* Difficulty */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>04</span><div style={s.cardTitle}>Session Difficulty</div></div>
               <div style={{ display: 'flex', gap: 12 }}>
@@ -245,6 +249,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
+            {/* Mode */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>05</span><div style={s.cardTitle}>Mode</div></div>
               <div style={{ display: 'flex', gap: 12 }}>
@@ -259,6 +264,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
+            {/* Intensity */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>06</span><div style={s.cardTitle}>Intensity</div></div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
