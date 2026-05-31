@@ -119,6 +119,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
           <span style={s.navTitle}>Platform Initialization</span>
         </div>
         <div style={s.navRight}>
+          <button style={s.navLinkBtn} onClick={onGoBack}>🏠 Dashboard</button>
           <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>

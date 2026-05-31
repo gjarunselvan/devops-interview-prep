@@ -77,6 +77,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       <nav style={s.nav}>
         <div style={s.navBrand}><div style={s.logo}>DI</div><span style={s.navTitle}>DevOps Command Center</span></div>
         <div style={s.navRight}>
+          <button style={s.navLinkBtn} onClick={() => window.location.reload()}>🏠 Dashboard</button>
           <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
@@ -179,6 +180,7 @@ const s = {
   logo:         { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
   navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
   navRight:     { display: 'flex', alignItems: 'center', gap: 15 },
+  navLinkBtn:   { background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: 'var(--text2)' },
   themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
   avatar:       { width: 32, height: 32, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 12 },
   navName:      { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
