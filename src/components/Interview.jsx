@@ -10,20 +10,12 @@ const TRANSITIONS = [
   "Noted. Next question coming up.",
 ]
 
-const ENCOURAGEMENTS = [
-  "Take your time, there's no rush.",
-  "Think it through, I'm listening.",
-  "Whenever you're ready.",
-]
-
 function randomFrom(arr) { return arr[Math.floor(Math.random() * arr.length)] }
 
 function speak(text, onEnd) {
   window.speechSynthesis.cancel()
   const utt = new SpeechSynthesisUtterance(text)
-  utt.rate = 0.92
-  utt.pitch = 1.05
-  utt.volume = 1
+  utt.rate = 0.92; utt.pitch = 1.05; utt.volume = 1
   const voices = window.speechSynthesis.getVoices()
   const preferred = voices.find(v => v.name === 'Google US English') || voices.find(v => v.lang === 'en-US' && !v.name.includes('Female')) || voices.find(v => v.lang === 'en-US') || voices[0]
   if (preferred) utt.voice = preferred
@@ -45,7 +37,7 @@ function scoreColor(score) {
   return 'var(--red)'
 }
 
-export default function Interview({ config, profile, onComplete, onSaveSession, theme, onPersonalize, bgColor }) {
+export default function Interview({ config, profile, onComplete, onSaveSession, theme, onPersonalize, bgColor, onGoHome }) {
   const { level, topicList, mode, sessionType, totalQ, timeTarget, interviewType } = config
 
   const [question,  setQuestion]  = useState('')
@@ -197,6 +189,7 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
     <div style={s.page}>
       <nav style={s.nav}>
         <div style={s.navLeft}>
+          <button style={s.backBtn} onClick={onGoHome}>← Abort</button>
           <div style={s.logo}>DI</div>
           <span style={s.navTitle}>DevOps Interview</span>
         </div>
@@ -278,7 +271,7 @@ const s = {
   page:             { minHeight: '100vh', background: 'var(--bg)' },
   nav:              { background: '#fff', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
   navLeft:          { display: 'flex', alignItems: 'center', gap: 10 },
-  backBtn:          { padding: '5px 10px', background: 'none', border: '1.5px solid var(--border)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginRight: 10 },
+  backBtn:          { padding: '5px 10px', background: 'none', border: '1.5px solid var(--border)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginRight: 10, cursor: 'pointer' },
   logo:             { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13 },
   navTitle:         { fontWeight: 700, fontSize: 15 },
   navRight:         { display: 'flex', alignItems: 'center', gap: 12 },
