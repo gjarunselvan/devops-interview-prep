@@ -36,8 +36,10 @@ export default function App() {
     })
   }, [])
 
+  // Sync theme to DOM and localStorage
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
     if (bgColor) {
       document.documentElement.style.setProperty('--bg', bgColor)
       localStorage.setItem('bg_color', bgColor)
@@ -45,7 +47,6 @@ export default function App() {
       document.documentElement.style.removeProperty('--bg')
       localStorage.removeItem('bg_color')
     }
-    localStorage.setItem('theme', theme)
   }, [theme, bgColor])
 
   async function loadUserAndGo(authUser) {
@@ -65,6 +66,7 @@ export default function App() {
     setProfile(prof)
     
     const meta = prof?.metadata || {}
+    // Priority: DB Preference -> Local Storage -> Default
     if (meta.theme) setTheme(meta.theme)
     if (meta.bg_color) setBgColor(meta.bg_color)
     setXp(meta.xp || 0)
@@ -76,6 +78,12 @@ export default function App() {
   async function handlePersonalize(newTheme, newColor) {
     setTheme(newTheme)
     setBgColor(newColor)
+    // Update local profile state immediately for UI consistency
+    setProfile(prev => ({ 
+      ...prev, 
+      metadata: { ...(prev?.metadata || {}), theme: newTheme, bg_color: newColor } 
+    }))
+    
     if (user?.id) {
       try {
         const { data } = await supabase.from('profiles').select('metadata').eq('id', user.id).maybeSingle()
@@ -121,14 +129,17 @@ export default function App() {
   if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Initializing Platform...</div>
 
   return (
-    <>
+    <div className="app-container">
       {screen === SCREENS.AUTH      && <Auth onAuth={loadUserAndGo} />}
       {screen === SCREENS.DASHBOARD && profile && (
         <Dashboard 
           profile={profile} 
           theme={theme} 
           bgColor={bgColor} 
-          onStartSession={() => setScreen(SCREENS.SETUP)} 
+          onStartSession={(cfg) => {
+            if (cfg) { handleStart(cfg) } 
+            else { setScreen(SCREENS.SETUP) }
+          }} 
           onLogout={() => supabase.auth.signOut()}
           onPersonalize={handlePersonalize}
           onUpdateProfile={(newProfile) => setProfile(newProfile)}
@@ -141,6 +152,6 @@ export default function App() {
       {screen === SCREENS.SETUP     && <Setup profile={profile} theme={theme} bgColor={bgColor} onPersonalize={handlePersonalize} onStart={handleStart} onLogout={() => supabase.auth.signOut()} onGoBack={() => setScreen(SCREENS.DASHBOARD)} />}
       {screen === SCREENS.INTERVIEW && config && <Interview config={config} profile={profile} theme={theme} bgColor={bgColor} onPersonalize={handlePersonalize} onComplete={handleComplete} onSaveSession={() => {}} onGoHome={() => setScreen(SCREENS.DASHBOARD)} />}
       {screen === SCREENS.REPORT    && config && <Report history={history} config={config} profile={profile} theme={theme} bgColor={bgColor} onPersonalize={handlePersonalize} onRestart={() => setScreen(SCREENS.SETUP)} onGoHome={() => setScreen(SCREENS.DASHBOARD)} />}
-    </>
+    </div>
   )
 }
