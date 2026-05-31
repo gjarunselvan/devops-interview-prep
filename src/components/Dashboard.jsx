@@ -175,20 +175,35 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
             </div>
 
             <div style={s.card}>
-              <div style={s.cardTitle}>AI Career Profile</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div style={s.cardTitle}>Technical Identity</div>
+                {meta.experienceLevel && <span style={s.proBadge}>{meta.experienceLevel.toUpperCase()}</span>}
+              </div>
+              
               {meta.summary ? (
-                <div style={s.profileBody}>
-                  <div style={s.profileSummary}>"{meta.summary}"</div>
-                  <div style={s.metaGrid}>
-                    <div style={s.metaItem}><span style={s.metaLabel}>TARGET</span><span style={s.metaVal}>{meta.experienceLevel}</span></div>
-                    <div style={s.metaItem}><span style={s.metaLabel}>SKILLS</span><div style={s.skillGrid}>{meta.skills?.slice(0, 10).map((sk, i) => <span key={i} style={s.skill}>{sk}</span>)}</div></div>
+                <div style={s.proProfile}>
+                  <div style={s.summaryBox}>
+                    <span style={s.quoteMark}>“</span>
+                    <p style={s.proSummary}>{meta.summary}</p>
+                  </div>
+                  
+                  <div style={{ marginTop: 24 }}>
+                    <div style={s.smallLabel}>EXTRACTED SKILL SET</div>
+                    <div style={s.skillCloud}>
+                      {meta.skills?.slice(0, 15).map((sk, i) => (
+                        <div key={i} style={s.proSkill}>
+                          <span style={s.skillDot} />
+                          {sk}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ) : (
                 <div style={s.dropzone} onClick={() => document.getElementById('res-up').click()}>
-                  <div style={{ fontSize: 32 }}>📁</div>
-                  <div style={{ fontSize: 15, fontWeight: 800, marginTop: 10 }}>Process Resume</div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 5 }}>Click to upload and analyze your background.</div>
+                  <div style={{ fontSize: 40, marginBottom: 16 }}>📄</div>
+                  <div style={{ fontSize: 16, fontWeight: 850 }}>Initialize Career Analysis</div>
+                  <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8, maxWidth: 280, margin: '8px auto 0' }}>Upload your resume to calibrate the AI interviewer and build your technical identity.</p>
                 </div>
               )}
             </div>
@@ -242,13 +257,15 @@ const s = {
   taskMeta:     { display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 700, marginTop: 4 },
   taskLink:     { color: 'var(--primary)', textDecoration: 'none', fontWeight: 900 },
   checkbox:     { width: 14, height: 14, marginTop: 2, cursor: 'pointer' },
-  profileBody:  { marginTop: 15 },
-  profileSummary: { fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, fontStyle: 'italic', marginBottom: 15 },
-  metaItem:     { marginBottom: 15 },
-  metaLabel:    { fontSize: 9, fontWeight: 900, color: 'var(--muted)', display: 'block', marginBottom: 5 },
-  metaVal:      { fontSize: 12, fontWeight: 800, color: 'var(--primary)' },
-  skillGrid:    { display: 'flex', flexWrap: 'wrap', gap: 6 },
-  skill:        { fontSize: 10, fontWeight: 700, background: 'var(--surface2)', padding: '4px 10px', borderRadius: 6 },
+  proBadge:     { padding: '4px 12px', background: 'var(--primary-l)', color: 'var(--primary)', borderRadius: 20, fontSize: 10, fontWeight: 900, letterSpacing: '0.05em' },
+  proProfile:   { marginTop: 10 },
+  summaryBox:   { background: 'var(--surface2)', padding: '20px', borderRadius: 12, position: 'relative', borderLeft: '4px solid var(--primary)' },
+  quoteMark:    { position: 'absolute', top: 10, left: 10, fontSize: 40, color: 'var(--primary)', opacity: 0.1, fontFamily: 'serif' },
+  proSummary:   { fontSize: 13, color: 'var(--text2)', lineHeight: 1.7, fontStyle: 'italic', position: 'relative', zIndex: 1 },
+  smallLabel:   { fontSize: 9, fontWeight: 900, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 12 },
+  skillCloud:   { display: 'flex', flexWrap: 'wrap', gap: 8 },
+  proSkill:     { background: 'var(--surface)', border: '1px solid var(--border)', padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, boxShadow: 'var(--shadow)' },
+  skillDot:     { width: 5, height: 5, borderRadius: '50%', background: 'var(--primary)' },
   dropzone:     { border: '1.5px dashed var(--border2)', borderRadius: 12, padding: '2rem', textAlign: 'center', background: 'var(--surface2)', cursor: 'pointer' },
   loading:      { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'var(--muted)', background: 'var(--bg)' },
   ghostBtn:     { background: 'none', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 6, fontSize: 9, fontWeight: 800, color: 'var(--muted)', cursor: 'pointer' },
