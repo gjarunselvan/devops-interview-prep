@@ -12,7 +12,9 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
   const [analyzing, setAnalyzing] = useState(false)
   const [generating, setGenerating] = useState(false)
 
-  useEffect(() => { loadDashboardData() }, [])
+  useEffect(() => { 
+    if (profile?.id) loadDashboardData() 
+  }, [profile?.id])
 
   async function loadDashboardData() {
     setLoading(true)
