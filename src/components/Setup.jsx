@@ -61,6 +61,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack }) {
   const [level,       setLevel]       = useState(null)
   const [topics,      setTopics]      = useState([])
   const [mode,        setMode]        = useState('text')
+  const [type,        setType]        = useState('technical') // technical or behavioral
   const [sessionType, setSessionType] = useState('questions')
   const [qTarget,     setQTarget]     = useState(10)
   const [timeTarget,  setTimeTarget]  = useState(30)
@@ -95,11 +96,11 @@ export default function Setup({ profile, onStart, onLogout, onGoBack }) {
   const topicList = topics.map(t => t.label).join(', ')
   const finalQ    = sessionType === 'questions' ? (parseInt(customQ) || qTarget) : null
   const finalT    = sessionType === 'time' ? (parseInt(customT) || timeTarget) : null
-  const canStart  = level && topics.length > 0
+  const canStart  = level && (type === 'behavioral' || topics.length > 0)
 
   function handleStart() {
     if (!canStart) return
-    onStart({ level, topics, topicList, mode, sessionType, totalQ: finalQ, timeTarget: finalT, studyTime })
+    onStart({ level, topics: type === 'behavioral' ? [] : topics, topicList: type === 'behavioral' ? 'Behavioral & Culture' : topicList, mode, sessionType, totalQ: finalQ, timeTarget: finalT, studyTime, interviewType: type })
   }
 
   return (
@@ -128,6 +129,30 @@ export default function Setup({ profile, onStart, onLogout, onGoBack }) {
         <div style={s.grid}>
           {/* Main Config */}
           <div style={s.mainCol}>
+            {/* Interview Type */}
+            <div style={s.card}>
+              <h3 style={s.cardTitle}>0. Interview Focus</h3>
+              <div style={s.typeGrid}>
+                {[
+                  { id: 'technical', icon: '💻', title: 'Technical Screen', desc: 'Focus on tools, syntax, and architecture' },
+                  { id: 'behavioral', icon: '🤝', title: 'Behavioral & Culture', desc: 'Focus on SRE principles, STAR method, and leadership' }
+                ].map(it => (
+                  <button key={it.id}
+                    style={{ 
+                      ...s.typeBtn, 
+                      borderColor: type === it.id ? 'var(--primary)' : 'var(--border)', 
+                      background: type === it.id ? 'var(--primary-l)' : 'var(--surface)',
+                      color: type === it.id ? 'var(--primary)' : 'var(--text)'
+                    }}
+                    onClick={() => setType(it.id)}>
+                    <span style={{ fontSize: 24, marginBottom: 8 }}>{it.icon}</span>
+                    <span style={{ fontWeight: 700, fontSize: 15 }}>{it.title}</span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{it.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Experience Level */}
             <div style={s.card}>
               <h3 style={s.cardTitle}>1. Experience Level</h3>

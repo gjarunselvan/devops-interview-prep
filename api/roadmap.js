@@ -20,13 +20,19 @@ Candidate Profile:
 Recent Performance/Weak Points:
 ${recentSessions?.map(s => `- Avg Score: ${s.avg_score}/10, Points to improve: ${s.improve_points?.join(', ')}`).join('\n') || 'No recent sessions.'}
 
-Create a structured study plan for 7 days (Monday to Sunday). Ensure the tasks fit within the ${studyTimePref} minutes daily limit.
+Create a structured study plan for 7 days. For every task, provide a "resourceLink" which is a direct search query or a likely official documentation URL.
 
 Respond in EXACTLY this JSON format:
 {
   "focus": "Overall focus of the week",
   "days": [
-    { "day": "Monday", "tasks": ["Task 1 (X mins)", "Task 2 (Y mins)"], "resourceHint": "Topic to search for" },
+    { 
+      "day": "Monday", 
+      "tasks": [
+        { "title": "Task 1", "duration": "30 mins", "resourceLink": "https://www.youtube.com/results?search_query=..." },
+        { "title": "Task 2", "duration": "15 mins", "resourceLink": "https://kubernetes.io/docs/..." }
+      ]
+    },
     ...
   ]
 }`
@@ -40,13 +46,13 @@ Respond in EXACTLY this JSON format:
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        max_tokens: 2048,
+        max_tokens: 3000,
         temperature: 0.5,
         response_format: { type: "json_object" },
         messages: [
           {
             role: 'system',
-            content: 'You are a DevOps mentor that outputs structured JSON.'
+            content: 'You are a DevOps mentor that outputs structured JSON with learning resources.'
           },
           { role: 'user', content: prompt }
         ]

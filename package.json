@@ -11,8 +11,11 @@
     "@supabase/supabase-js": "^2.39.0",
     "mammoth": "^1.12.0",
     "pdfjs-dist": "^6.0.227",
+    "prismjs": "^1.30.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-simple-code-editor": "^0.14.1",
+    "vite-plugin-pwa": "^1.3.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",

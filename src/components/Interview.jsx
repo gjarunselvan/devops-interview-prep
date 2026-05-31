@@ -267,9 +267,23 @@ export default function Interview({ config, profile, onComplete, onSaveSession }
             {!feedback && !intro && question && (
               <div style={s.card}>
                 <div style={s.cardLabel}>Your Response</div>
-                {mode === 'text' ? (
+                
+                {/* Mode Selector */}
+                <div style={s.modeSelector}>
+                  {['text', 'voice', 'editor'].map(m => (
+                    <button key={m} 
+                      style={{ ...s.smallModeBtn, background: mode === m ? 'var(--primary-l)' : 'none', color: mode === m ? 'var(--primary)' : 'var(--muted)' }}
+                      onClick={() => setMode(m)}>
+                      {m.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+
+                {mode === 'text' && (
                   <textarea style={s.textarea} value={answer} onChange={e => setAnswer(e.target.value)} placeholder="Explain your approach..." rows={6} />
-                ) : (
+                )}
+
+                {mode === 'voice' && (
                   <div style={s.voiceBox}>
                     <p style={answer ? s.voiceText : s.voicePlaceholder}>{answer || (listening ? 'Listening...' : 'Press mic to speak')}</p>
                     <button style={{ ...s.micBtn, background: listening ? 'var(--red)' : 'var(--primary)' }} onClick={listening ? stopListening : startListening}>
@@ -277,6 +291,20 @@ export default function Interview({ config, profile, onComplete, onSaveSession }
                     </button>
                   </div>
                 )}
+
+                {mode === 'editor' && (
+                  <div style={s.editorWrapper}>
+                    <Editor
+                      value={answer}
+                      onValueChange={code => setAnswer(code)}
+                      highlight={code => highlight(code, languages.yaml)}
+                      padding={20}
+                      style={s.editor}
+                      placeholder="# Write your YAML/IaC here..."
+                    />
+                  </div>
+                )}
+
                 <button style={{ ...s.submitBtn, opacity: !answer.trim() || loading ? 0.5 : 1 }} disabled={!answer.trim() || loading} onClick={submitAnswer}>
                   {loading ? 'Evaluating...' : 'Submit Response'}
                 </button>

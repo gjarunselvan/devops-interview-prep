@@ -17,9 +17,12 @@ export default function App() {
   const [sessionId, setSessionId] = useState(null)
   const [loading,   setLoading]   = useState(true)
 
-  // Personalization State
+  // Personalization & Gamification State
   const [theme,     setTheme]     = useState('light')
   const [bgColor,   setBgColor]   = useState('')
+  const [xp,        setXp]        = useState(0)
+  const [level,     setLevel]     = useState(1)
+  const [streak,    setStreak]    = useState(0)
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -64,9 +67,31 @@ export default function App() {
     setUser(authUser)
     setProfile(profile || { full_name: authUser.email, username: authUser.email })
     
-    // Set personalization from profile
+    // Set personalization & gamification from profile
     if (profile?.theme) setTheme(profile.theme)
     if (profile?.bg_color) setBgColor(profile.bg_color)
+    setXp(profile?.xp || 0)
+    setLevel(profile?.level || 1)
+    
+    // Streak Calculation
+    let currentStreak = profile?.streak || 0
+    const lastActive = profile?.last_active ? new Date(profile.last_active) : null
+    const today = new Date(); today.setHours(0,0,0,0)
+    
+    if (lastActive) {
+      lastActive.setHours(0,0,0,0)
+      const diff = (today - lastActive) / (1000 * 60 * 60 * 24)
+      if (diff === 1) {
+        currentStreak += 1
+      } else if (diff > 1) {
+        currentStreak = 1 // Reset if missed a day
+      }
+    } else {
+      currentStreak = 1 // First day
+    }
+    
+    setStreak(currentStreak)
+    await supabase.from('profiles').update({ streak: currentStreak, last_active: today.toISOString() }).eq('id', authUser.id)
 
     // Check for incomplete session
     const { data: incompleteArr } = await supabase

@@ -96,7 +96,7 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
           metadata: { summary, recommendedTopics, suggestedCourses }
         }).eq('id', profile.id)
         alert('Resume analyzed! Your profile and roadmap recommendations have been updated.')
-        window.location.reload() // Refresh to update pre-filled topics in Setup
+        window.location.reload()
       }
     } catch (err) {
       console.error('Parsing error:', err)
@@ -163,7 +163,6 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
         </div>
 
         <div style={s.grid}>
-          {/* Left: Progress & Roadmap */}
           <div style={s.leftCol}>
             <div style={s.statsRow}>
               <div style={s.statCard}>
@@ -171,11 +170,16 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
                 <div style={s.statValue}>{avgScore}<span style={s.statTotal}>/10</span></div>
               </div>
               <div style={s.statCard}>
-                <div style={s.statLabel}>Sessions</div>
-                <div style={s.statValue}>{sessions.length}</div>
+                <div style={s.statLabel}>Level {profile.level || 1}</div>
+                <div style={s.statValue}>{profile.xp || 0}<span style={s.statTotal}> XP</span></div>
+                <div style={s.xpBar}><div style={{ ...s.xpFill, width: `${((profile.xp || 0) % 500) / 5}%` }} /></div>
+              </div>
+              <div style={s.statCard}>
+                <div style={s.statLabel}>Day Streak</div>
+                <div style={s.statValue}>🔥 {profile.streak || 1}</div>
               </div>
               <button style={s.startBtn} onClick={onStartSession}>
-                Start New Interview →
+                New Interview →
               </button>
             </div>
 
@@ -189,7 +193,18 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
                       <div key={i} style={s.dayCard}>
                         <div style={s.dayName}>{d.day}</div>
                         <ul style={s.taskList}>
-                          {d.tasks.map((t, ti) => <li key={ti} style={s.task}>{t}</li>)}
+                          {d.tasks.map((t, ti) => (
+                            <li key={ti} style={s.task}>
+                              <div style={s.taskInfo}>
+                                <div style={s.taskTitle}>{t.title} <span style={s.taskDur}>({t.duration})</span></div>
+                                {t.resourceLink && (
+                                  <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.resourceLink}>
+                                    View Resource ↗
+                                  </a>
+                                )}
+                              </div>
+                            </li>
+                          ))}
                         </ul>
                       </div>
                     ))}
@@ -229,7 +244,6 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
             </div>
           </div>
 
-          {/* Right: Resume & History */}
           <div style={s.rightCol}>
             <div style={s.card}>
               <h3 style={s.cardTitle}>Resume Analysis</h3>
@@ -283,12 +297,12 @@ const s = {
   page: { minHeight: '100vh', background: 'var(--bg)' },
   loading: { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' },
   container: { maxWidth: 1200, margin: '0 auto', padding: '0 1.5rem' },
-  nav: { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0.75rem 0', sticky: 'top', zIndex: 10 },
+  nav: { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0.75rem 0', position: 'sticky', top: 0, zIndex: 10 },
   navContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   logo: { background: 'var(--primary)', color: '#fff', padding: '8px 12px', borderRadius: 8, fontWeight: 800, fontSize: 18 },
   navActions: { display: 'flex', alignItems: 'center', gap: '1rem' },
   userName: { fontWeight: 500, fontSize: 14, color: 'var(--text-2)' },
-  logoutBtn: { background: 'none', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 6, fontSize: 13, color: 'var(--muted)' },
+  logoutBtn: { background: 'none', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8, fontSize: 13, color: 'var(--muted)' },
   hero: { padding: '3rem 0 2rem' },
   greeting: { fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem' },
   accent: { color: 'var(--primary)' },
@@ -301,6 +315,8 @@ const s = {
   statLabel: { fontSize: 12, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 },
   statValue: { fontSize: 24, fontWeight: 800, color: 'var(--text)' },
   statTotal: { fontSize: 14, color: 'var(--muted)', fontWeight: 400 },
+  xpBar: { height: 6, background: 'var(--surface-2)', borderRadius: 3, marginTop: 8, overflow: 'hidden' },
+  xpFill: { height: '100%', background: 'var(--primary)', transition: 'width 0.4s ease' },
   startBtn: { flex: 1.5, background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius)', fontSize: 16, fontWeight: 700, padding: '1rem' },
   card: { background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' },
   cardTitle: { fontSize: 18, fontWeight: 700, marginBottom: '1rem' },
@@ -320,7 +336,11 @@ const s = {
   dayCard: { background: 'var(--surface)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border)', boxShadow: 'var(--shadow)' },
   dayName: { fontWeight: 800, fontSize: 13, marginBottom: 8, color: 'var(--primary)', textTransform: 'uppercase' },
   taskList: { listStyle: 'none', fontSize: 12, color: 'var(--text-2)' },
-  task: { marginBottom: 6, display: 'flex', alignItems: 'flex-start', gap: 6 },
+  task: { marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 6, borderLeft: '2px solid var(--primary-l)', paddingLeft: 8 },
+  taskInfo: { display: 'flex', flexDirection: 'column', gap: 4 },
+  taskTitle: { fontWeight: 600, fontSize: 12 },
+  taskDur: { color: 'var(--muted)', fontWeight: 400, fontSize: 11 },
+  resourceLink: { fontSize: 10, color: 'var(--primary)', fontWeight: 700, textDecoration: 'none', textTransform: 'uppercase' },
   courseList: { display: 'flex', flexDirection: 'column', gap: 10 },
   courseItem: { display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface-2)', padding: '10px 14px', borderRadius: 8 },
   courseText: { fontSize: 14, fontWeight: 500 },
