@@ -57,12 +57,18 @@ const TOPIC_GROUPS = [
 ]
 
 const Q_OPTIONS   = [5, 10, 15, 20]
+const DIFFICULTIES = [
+  { id: 'easy',   label: 'Easy',   color: '#10b981' },
+  { id: 'medium', label: 'Medium', color: '#f59e0b' },
+  { id: 'hard',   label: 'Hard',   color: '#ef4444' }
+]
 
 export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onPersonalize, bgColor }) {
   const [level,       setLevel]       = useState(null)
   const [topics,      setTopics]      = useState([])
   const [mode,        setMode]        = useState('text')
   const [type,        setType]        = useState('technical')
+  const [difficulty,  setDifficulty]  = useState('medium')
   const [qTarget,     setQTarget]     = useState(10)
   const [studyTime,   setStudyTime]   = useState(profile?.study_daily_mins || 60)
   const [customYears, setCustomYears] = useState('')
@@ -98,7 +104,8 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
       sessionType: 'questions', 
       totalQ: qTarget, 
       studyTime, 
-      interviewType: type 
+      interviewType: type,
+      difficulty
     })
   }
 
@@ -151,22 +158,28 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
-            {/* Track */}
+            {/* Track Selector */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>02</span><div style={s.cardTitle}>Interview Track</div></div>
-              <div style={{ display: 'flex', gap: 12 }}>
-                {[{ id: 'technical', label: 'Technical Mastery' }, { id: 'behavioral', label: 'Leadership & Culture' }].map(it => (
+              <div style={s.typeStack}>
+                {[
+                  { id: 'technical', label: 'Technical Screen', desc: 'Tools, syntax & architecture' },
+                  { id: 'coding',    label: 'Coding & IaC',    desc: 'Manifests, automation & logic' },
+                  { id: 'behavioral', label: 'SRE & Culture',   desc: 'Situational & Soft skills' },
+                  { id: 'mixed',      label: 'Mixed Mode',      desc: 'All-in-one comprehensive' }
+                ].map(it => (
                   <button key={it.id} 
-                    style={{ ...s.chipBtn, flex: 1, borderColor: type === it.id ? 'var(--primary)' : 'var(--border)', background: type === it.id ? 'var(--primary-l)' : 'var(--surface)', color: type === it.id ? 'var(--primary)' : 'var(--muted)' }}
+                    style={{ ...s.trackBtn, borderColor: type === it.id ? 'var(--primary)' : 'var(--border)', background: type === it.id ? 'var(--primary-l)' : 'var(--surface)', color: type === it.id ? 'var(--primary)' : 'var(--muted)' }}
                     onClick={() => setType(it.id)}>
-                    {it.label}
+                    <div style={{ fontWeight: 850 }}>{it.label}</div>
+                    <div style={{ fontSize: 10, opacity: 0.8, marginTop: 2 }}>{it.desc}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Tech Stack */}
-            {type === 'technical' && (
+            {(type !== 'behavioral') && (
               <div style={s.card}>
                 <div style={s.cardHeader}><span style={s.step}>03</span><div style={s.cardTitle}>Technical Focus</div></div>
                 <div style={s.groupsContainer}>
@@ -194,12 +207,26 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
           </div>
 
           <div style={s.settingsPanel}>
+            {/* Difficulty */}
             <div style={s.card}>
-              <div style={s.cardHeader}><span style={s.step}>04</span><div style={s.cardTitle}>Interaction Mode</div></div>
+              <div style={s.cardHeader}><span style={s.step}>04</span><div style={s.cardTitle}>Simulation Difficulty</div></div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                {DIFFICULTIES.map(d => (
+                  <button key={d.id}
+                    style={{ ...s.chipBtn, flex: 1, borderColor: difficulty === d.id ? d.color : 'var(--border)', background: difficulty === d.id ? `${d.color}15` : 'var(--surface)', color: difficulty === d.id ? d.color : 'var(--muted)' }}
+                    onClick={() => setDifficulty(d.id)}>
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={s.card}>
+              <div style={s.cardHeader}><span style={s.step}>05</span><div style={s.cardTitle}>Interaction Mode</div></div>
               <div style={{ display: 'flex', gap: 12 }}>
                 {[
-                  { id: 'text',  icon: '⌨️', title: 'Interactive Text' },
-                  { id: 'voice', icon: '🎙️', title: 'Immersive Voice' },
+                  { id: 'text',  icon: '⌨️', title: 'Text' },
+                  { id: 'voice', icon: '🎙️', title: 'Voice' },
                 ].map(m => (
                   <button key={m.id}
                     style={{ ...s.modeBtn, flex: 1, borderColor: mode === m.id ? 'var(--primary)' : 'var(--border)', background: mode === m.id ? 'var(--primary-l)' : 'var(--surface)', color: mode === m.id ? 'var(--primary)' : 'var(--text2)' }}
@@ -212,7 +239,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
             </div>
 
             <div style={s.card}>
-              <div style={s.cardHeader}><span style={s.step}>05</span><div style={s.cardTitle}>Session Intensity</div></div>
+              <div style={s.cardHeader}><span style={s.step}>06</span><div style={s.cardTitle}>Intensity</div></div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
                 {Q_OPTIONS.map(q => (
                   <button key={q}
@@ -222,12 +249,12 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
                   </button>
                 ))}
               </div>
-              <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Daily Learning Budget: {studyTime}m</div>
+              <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Prep Budget: {studyTime}m/day</div>
               <input type="range" min="15" max="240" step="15" value={studyTime} onChange={e => setStudyTime(e.target.value)} style={{ width: '100%' }} />
             </div>
 
             <button style={{ ...s.startBtn, opacity: canStart ? 1 : 0.4 }} disabled={!canStart} onClick={handleLaunch}>
-              Initialize AI Interview →
+              Start {type.toUpperCase()} Simulation →
             </button>
           </div>
         </div>
@@ -246,8 +273,8 @@ const s = {
   themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer' },
   avatar:       { width: 34, height: 34, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 14 },
   navName:      { fontSize: 14, fontWeight: 700, color: 'var(--text2)' },
-  logoutBtn:    { padding: '6px 14px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--red)', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
-  content:      { maxWidth: '100%', margin: '0 auto', padding: '2rem 3rem' },
+  logoutBtn:    { padding: '6px 14px', border: '1.5px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--red)', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
+  content:      { maxWidth: 1300, margin: '0 auto', padding: '2rem 3rem' },
   hero:         { marginBottom: '3rem', textAlign: 'center' },
   heroTitle:    { fontSize: 40, fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.03em' },
   heroSub:      { fontSize: 18, color: 'var(--muted)', marginTop: 8, fontWeight: 500 },
@@ -258,6 +285,8 @@ const s = {
   cardTitle:    { fontSize: 18, fontWeight: 850, color: 'var(--text)' },
   levelGrid:    { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 },
   levelBtn:     { padding: '16px 10px', borderRadius: 12, border: '2px solid', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' },
+  typeStack:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
+  trackBtn:     { padding: '16px', borderRadius: 14, border: '2px solid', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' },
   groupsContainer: { display: 'flex', flexDirection: 'column', gap: 32 },
   groupName:    { fontSize: 12, fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 },
   topicGrid:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12 },
