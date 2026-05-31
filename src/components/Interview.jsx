@@ -61,10 +61,10 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
   const [qIndex,    setQIndex]    = useState(0)
   const [history,   setHistory]   = useState([])
   const [speaking,  setSpeaking]  = useState(false)
-  const [listening, setListening] = useState(false)
   const [timeLeft,  setTimeLeft]  = useState(timeTarget * 60)
   const [status,    setStatus]    = useState('') 
   const [isMobile,  setIsMobile]  = useState(window.innerWidth < 768)
+  const [voiceUnlocked, setVoiceUnlocked] = useState(false)
 
   const timerRef       = useRef(null)
   const historyRef     = useRef([])
@@ -88,14 +88,19 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
     return () => clearInterval(timerRef.current)
   }, [])
 
+  // INITIALIZATION
   useEffect(() => {
+    if (mode === 'voice' && !voiceUnlocked) {
+      setStatus('Waiting for voice activation...')
+      return
+    }
     const name = profile.full_name.split(' ')[0]
     const introText = `Hello ${name}, I'm ${INTERVIEWER_NAME}. Let's start your ${interviewType} session.`
     setStatus(introText)
     if (mode === 'voice') {
       setSpeaking(true); speak(introText, () => { setSpeaking(false); loadQuestion([]) })
     } else { loadQuestion([]) }
-  }, [])
+  }, [voiceUnlocked])
 
   async function loadQuestion(hist) {
     setLoading(true); setStatus('Preparing next question...')
@@ -141,16 +146,35 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
 
   const currentScore = feedback ? (feedback.match(/(\d+)\s*\/\s*10/)?.[1] || '?') : null
 
+  // VOICE UNLOCK SCREEN FOR MOBILE
+  if (mode === 'voice' && !voiceUnlocked) {
+    return (
+      <div style={s.unlockPage}>
+        <div style={s.unlockCard}>
+          <div style={{ fontSize: 48, marginBottom: 20 }}>🎙️</div>
+          <h2 style={{ marginBottom: 10 }}>Voice Mode Ready</h2>
+          <p style={{ color: 'var(--muted)', marginBottom: 25, fontSize: 14 }}>Mobile browsers require a tap to enable AI audio.</p>
+          <button style={s.launchBtn} onClick={() => {
+            // Mobile audio unlock sequence
+            window.speechSynthesis.speak(new SpeechSynthesisUtterance(' '));
+            setVoiceUnlocked(true);
+          }}>TAP TO BEGIN SESSION</button>
+          <button style={s.ghostBtn} onClick={onGoHome} style={{ marginTop: 15 }}>Return to Dashboard</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={s.page}>
       <nav style={s.nav}>
         <div style={s.navLeft}>
           <button style={s.backBtn} onClick={onGoHome}>← {isMobile ? '' : 'Abort'}</button>
           {!isMobile && <div style={s.logo}>DI</div>}
-          <span style={s.navTitle}>{isMobile ? 'Simulation' : 'DevOps Interview'}</span>
+          <span style={s.navTitle}>{isMobile ? 'Simulation' : 'Interview'}</span>
         </div>
         <div style={s.navRight}>
-          {sessionType === 'time' ? <div style={s.timer}>⏱ {fmtTime(timeLeft)}</div> : <div style={s.qCounter}>Q {qIndex + 1}/{totalQ}</div>}
+          {sessionType === 'time' ? <div style={s.timer}>{fmtTime(timeLeft)}</div> : <div style={s.qCounter}>Q{qIndex + 1}/{totalQ}</div>}
           <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
@@ -159,21 +183,17 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
       </nav>
 
       <div style={s.container}>
-        <div style={{ ...s.layout, gridTemplateColumns: isMobile ? '1fr' : '1fr 320px' }}>
+        <div style={{ ...s.layout, gridTemplateColumns: isMobile ? '1fr' : '1fr 300px' }}>
           
-          {/* MAIN FLOW */}
           <div style={s.mainCol}>
-            
-            {/* INTERVIEWER CARD */}
             <div style={s.interviewerCard}>
               <div style={{ ...s.avatar, ...(speaking ? s.avatarSpeaking : {}) }}>{INTERVIEWER_NAME[0]}</div>
               <div style={{ flex: 1 }}>
                 <div style={s.interviewerName}>{INTERVIEWER_NAME}</div>
-                <div style={s.interviewerStatus}>{status || 'Alex is waiting...'}</div>
+                <div style={s.interviewerStatus}>{status || 'Waiting...'}</div>
               </div>
             </div>
 
-            {/* SCENARIO CARD */}
             <div style={s.card}>
               <div style={s.cardLabel}>TECHNICAL SCENARIO {qIndex + 1}</div>
               <div className="markdown-body" style={s.questionText}>
@@ -181,21 +201,21 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
               </div>
             </div>
 
-            {/* RESPONSE CARD */}
             {!feedback && !loading && question && (
               <div style={s.card}>
-                {inputMode === 'text' ? (
-                  <textarea style={s.textarea} placeholder="Write your response..." value={answer} onChange={e => setAnswer(e.target.value)} rows={isMobile ? 6 : 10} />
+                {mode === 'text' ? (
+                  <textarea style={s.textarea} placeholder="Describe your solution..." value={answer} onChange={e => setAnswer(e.target.value)} rows={isMobile ? 5 : 8} />
                 ) : (
-                  <div style={s.editorBox}>
-                    <Editor value={answer} onValueChange={c => setAnswer(c)} highlight={c => highlight(c, languages.yaml)} padding={15} style={s.editor} />
+                  <div style={s.voiceBox}>
+                    <p style={{ opacity: answer ? 1 : 0.5 }}>{answer || 'Speak your answer clearly...'}</p>
+                    {/* Simulated Voice Bar */}
+                    <div style={s.voiceVisualizer}><span></span><span></span><span></span><span></span></div>
                   </div>
                 )}
                 <button style={{ ...s.submitBtn, opacity: answer.trim() ? 1 : 0.4 }} disabled={!answer.trim()} onClick={submitAnswer}>SUBMIT RESPONSE →</button>
               </div>
             )}
 
-            {/* ASSESSMENT CARD */}
             {feedback && (
               <div style={{ ...s.card, border: '2px solid var(--green)' }} className="fade-in">
                 <div style={s.cardHeader}>
@@ -210,19 +230,18 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
             )}
           </div>
 
-          {/* PROGRESS SIDEBAR */}
           {!isMobile && (
             <div style={s.sideCol}>
               <div style={s.card}>
-                <div style={s.cardTitle}>Live Progress</div>
+                <div style={s.cardTitle}>Live Log</div>
                 <div style={s.historyList}>
                   {history.map((h, i) => (
                     <div key={i} style={s.historyItem}>
-                      <span style={s.hNum}>Q{i+1}</span>
+                      <span style={s.hNum}>S{i+1}</span>
                       <span style={{ ...s.hScore, color: scoreColor(h.score) }}>{h.score}/10</span>
                     </div>
                   ))}
-                  {history.length === 0 && <div style={s.empty}>No scenarios completed.</div>}
+                  {history.length === 0 && <div style={s.empty}>Ready to begin.</div>}
                 </div>
               </div>
             </div>
@@ -235,48 +254,56 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
 
 const s = {
   page:         { minHeight: '100vh', background: 'var(--bg)', width: '100%', overflowX: 'hidden' },
-  nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 1rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
-  navLeft:      { display: 'flex', alignItems: 'center', gap: 10 },
-  backBtn:      { padding: '6px 12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, fontWeight: 700, color: 'var(--text2)', cursor: 'pointer' },
-  logo:         { width: 34, height: 34, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 14 },
-  navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
-  navRight:     { display: 'flex', alignItems: 'center', gap: 10 },
-  themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 36, height: 36, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
-  qCounter:     { fontFamily: 'JetBrains Mono', fontSize: 13, fontWeight: 800, color: 'var(--primary)', background: 'var(--primary-l)', padding: '4px 8px', borderRadius: 6 },
-  timer:        { fontFamily: 'JetBrains Mono', fontSize: 13, fontWeight: 800, color: 'var(--text2)' },
-  endBtn:       { padding: '6px 14px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--red)', fontSize: 11, fontWeight: 900, cursor: 'pointer' },
+  nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 0.75rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
+  navLeft:      { display: 'flex', alignItems: 'center', gap: 8 },
+  backBtn:      { padding: '6px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11, fontWeight: 700, color: 'var(--text2)', cursor: 'pointer' },
+  logo:         { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
+  navTitle:     { fontWeight: 800, fontSize: 15, color: 'var(--text)', letterSpacing: '-0.02em' },
+  navRight:     { display: 'flex', alignItems: 'center', gap: 8 },
+  themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
+  qCounter:     { fontFamily: 'JetBrains Mono', fontSize: 12, fontWeight: 800, color: 'var(--primary)', background: 'var(--primary-l)', padding: '4px 8px', borderRadius: 6 },
+  timer:        { fontFamily: 'JetBrains Mono', fontSize: 12, fontWeight: 800, color: 'var(--text2)' },
+  endBtn:       { padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--red)', fontSize: 10, fontWeight: 900, cursor: 'pointer' },
   
-  container:    { padding: '1.5rem 1rem', maxWidth: 1300, margin: '0 auto' },
-  layout:       { display: 'grid', gap: '1.5rem' },
-  mainCol:      { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-  sideCol:      { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+  container:    { padding: '1rem', maxWidth: '100%', margin: '0 auto', boxSizing: 'border-box' },
+  layout:       { display: 'grid', gap: '1rem' },
+  mainCol:      { display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: '100%' },
+  sideCol:      { display: 'flex', flexDirection: 'column', gap: '1rem' },
   
-  interviewerCard: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: 14, boxShadow: 'var(--shadow)' },
-  avatar:       { width: 44, height: 44, background: 'linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 18, border: '2px solid var(--surface)' },
+  interviewerCard: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem', display: 'flex', alignItems: 'center', gap: 12, boxShadow: 'var(--shadow)' },
+  avatar:       { width: 40, height: 40, background: 'linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 16, border: '2px solid var(--surface)' },
   avatarSpeaking: { boxShadow: '0 0 0 4px var(--primary-glow)', transform: 'scale(1.05)' },
-  interviewerName: { fontSize: 15, fontWeight: 800 },
-  interviewerStatus: { fontSize: 12, color: 'var(--muted)', fontWeight: 500, marginTop: 2 },
+  interviewerName: { fontSize: 14, fontWeight: 800 },
+  interviewerStatus: { fontSize: 11, color: 'var(--muted)', fontWeight: 500 },
   
-  card:         { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', boxShadow: 'var(--shadow)' },
-  cardLabel:    { fontSize: 10, fontWeight: 900, color: 'var(--primary)', marginBottom: 15, textTransform: 'uppercase', letterSpacing: '0.1em' },
+  card:         { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.25rem', boxShadow: 'var(--shadow)', boxSizing: 'border-box', width: '100%' },
+  cardLabel:    { fontSize: 9, fontWeight: 900, color: 'var(--primary)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.1em' },
   cardHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   cardTitle:    { fontSize: 11, fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase' },
   
-  questionText: { fontSize: 'clamp(15px, 4.5vw, 17px)', lineHeight: 1.7, color: 'var(--text)', fontWeight: 500 },
-  textarea:     { width: '100%', padding: '1.25rem', background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 14, fontSize: 16, outline: 'none', color: 'var(--text)', transition: 'border-color 0.2s' },
-  editorBox:    { background: 'var(--bg)', borderRadius: 14, border: '1.5px solid var(--border)', overflow: 'hidden', minHeight: 300 },
-  editor:       { fontFamily: '"JetBrains Mono", monospace', fontSize: 14 },
+  questionText: { fontSize: 'clamp(14px, 4vw, 16px)', lineHeight: 1.6, color: 'var(--text)', fontWeight: 500 },
+  textarea:     { width: '100%', padding: '1rem', background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 12, fontSize: 15, outline: 'none', color: 'var(--text)', boxSizing: 'border-box' },
+  editorBox:    { background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden', minHeight: 250 },
+  editor:       { fontFamily: '"JetBrains Mono", monospace', fontSize: 13 },
   
-  submitBtn:    { width: '100%', marginTop: 15, padding: '18px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 15, fontWeight: 900, boxShadow: '0 8px 20px var(--primary-glow)' },
-  scoreBadge:   { padding: '6px 14px', borderRadius: 10, fontSize: 15, fontWeight: 900, fontFamily: 'JetBrains Mono' },
-  feedbackText: { fontSize: 14, color: 'var(--text2)', lineHeight: 1.8 },
-  nextBtn:      { width: '100%', marginTop: 20, padding: '16px', background: 'var(--text)', color: 'var(--bg)', borderRadius: 12, fontSize: 14, fontWeight: 800 },
+  voiceBox:     { minHeight: 120, background: 'var(--surface2)', border: '2px dashed var(--border)', borderRadius: 14, padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 15, color: 'var(--text2)', marginBottom: 15 },
+  voiceVisualizer: { display: 'flex', gap: 4, height: 20, alignItems: 'center', marginTop: 10 },
   
-  historyList:  { display: 'flex', flexDirection: 'column', gap: 10, marginTop: 15 },
-  historyItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, border: '1px solid var(--border)' },
-  hNum:         { fontSize: 11, fontWeight: 900, color: 'var(--primary)', background: 'var(--primary-l)', padding: '2px 7px', borderRadius: 5 },
-  hScore:       { fontSize: 13, fontWeight: 800 },
+  submitBtn:    { width: '100%', marginTop: 10, padding: '16px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 900, boxShadow: '0 8px 16px var(--primary-glow)' },
+  scoreBadge:   { padding: '4px 12px', borderRadius: 8, fontSize: 14, fontWeight: 900, fontFamily: 'JetBrains Mono' },
+  feedbackText: { fontSize: 13, color: 'var(--text2)', lineHeight: 1.7 },
+  nextBtn:      { width: '100%', marginTop: 15, padding: '14px', background: 'var(--text)', color: 'var(--bg)', borderRadius: 10, fontSize: 13, fontWeight: 800 },
   
-  loader:       { display: 'flex', justifyContent: 'center', padding: '2rem' },
-  empty:        { textAlign: 'center', color: 'var(--muted)', fontSize: 12, padding: '1rem' }
+  historyList:  { display: 'flex', flexDirection: 'column', gap: 8 },
+  historyItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--surface2)', borderRadius: 8, border: '1px solid var(--border)' },
+  hNum:         { fontSize: 10, fontWeight: 900, color: 'var(--primary)', background: 'var(--primary-l)', padding: '2px 6px', borderRadius: 4 },
+  hScore:       { fontSize: 12, fontWeight: 800 },
+  
+  unlockPage:   { height: '100vh', width: '100vw', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', boxSizing: 'border-box' },
+  unlockCard:   { background: 'var(--surface)', padding: '2.5rem', borderRadius: 24, textAlign: 'center', boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 400 },
+  launchBtn:    { width: '100%', padding: '18px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 15, fontWeight: 900, boxShadow: '0 10px 20px var(--primary-glow)' },
+  ghostBtn:     { background: 'none', color: 'var(--muted)', fontSize: 13, fontWeight: 600, border: 'none' },
+  
+  loader:       { display: 'flex', justifyContent: 'center', padding: '1rem' },
+  empty:        { textAlign: 'center', color: 'var(--muted)', fontSize: 12 }
 }
