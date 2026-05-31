@@ -66,6 +66,7 @@ const DIFFICULTIES = [
 export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onPersonalize, bgColor }) {
   const [level,       setLevel]       = useState(null)
   const [topics,      setTopics]      = useState([])
+  const [customTopic, setCustomTopic] = useState('')
   const [mode,        setMode]        = useState('text')
   const [type,        setType]        = useState('technical')
   const [difficulty,  setDifficulty]  = useState('medium')
@@ -87,10 +88,11 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
   }, [profile])
 
   function toggleTopic(t) {
+    if (t.id === 'custom_entry') return // Click handler is on input
     setTopics(prev => prev.find(x => x.id === t.id) ? prev.filter(x => x.id !== t.id) : [...prev, t])
   }
 
-  const topicList = topics.map(t => t.label).join(', ')
+  const topicList = topics.map(t => t.id === 'custom_entry' ? customTopic : t.label).filter(Boolean).join(', ')
   const canStart  = (level || customYears) && (type === 'behavioral' || type === 'surprise' || topics.length > 0)
 
   const finalLevel = customYears ? { tag: `${customYears}y Exp`, label: `${customYears} Years`, color: '#2563eb' } : level
@@ -114,9 +116,9 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
   return (
     <div style={s.page}>
       <nav style={s.nav}>
-        <div style={{ ...s.navBrand, cursor: 'pointer' }} onClick={onGoBack}>
+        <div style={s.navBrand} onClick={onGoBack} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={s.logo}>DI</div>
-          <span style={s.navTitle}>Platform Initialization</span>
+          <span style={s.navTitle}>DevOps Initialization</span>
         </div>
         <div style={s.navRight}>
           <button style={s.navLinkBtn} onClick={onGoBack}>🏠 Dashboard</button>
@@ -131,8 +133,8 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
 
       <div style={s.content}>
         <div style={s.hero}>
-          <h2 style={s.heroTitle}>Simulate your <span style={{ color: 'var(--primary)' }}>Expert Path</span></h2>
-          <p style={s.heroSub}>Customize the track and difficulty to match your career goals.</p>
+          <h2 style={s.heroTitle}>Target your <span style={{ color: 'var(--primary)' }}>Technical Path</span></h2>
+          <p style={s.heroSub}>Set your seniority, track, and stack to begin.</p>
         </div>
 
         <div style={s.grid}>
@@ -153,7 +155,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               <div style={{ marginTop: 16 }}>
                 <input 
                   type="number" 
-                  placeholder="Or enter custom years of experience..." 
+                  placeholder="Or enter custom years (e.g. 45)..." 
                   style={s.input} 
                   value={customYears} 
                   onChange={e => { setCustomYears(e.target.value); setLevel(null); }}
@@ -166,7 +168,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               <div style={s.cardHeader}><span style={s.step}>02</span><div style={s.cardTitle}>Interview Track</div></div>
               <div style={s.typeStack}>
                 {[
-                  { id: 'technical', label: 'Technical Screen', desc: 'Architecture & Tools' },
+                  { id: 'technical', label: 'Technical Mastery', desc: 'Architecture & Tools' },
                   { id: 'coding',    label: 'Coding & IaC',      desc: 'Manifests & Scripting' },
                   { id: 'behavioral', label: 'Leadership',       desc: 'Situational & Soft' },
                   { id: 'surprise',   label: 'Surprise Me! ✨',  desc: 'Any topic, Hard difficulty' }
@@ -204,6 +206,28 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
                       </div>
                     </div>
                   ))}
+                  <div style={s.group}>
+                    <div style={s.groupName}>Custom Focus</div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <input 
+                        type="text" 
+                        placeholder="Add custom topic..." 
+                        style={{ ...s.input, flex: 1 }} 
+                        value={customTopic}
+                        onChange={e => setCustomTopic(e.target.value)}
+                      />
+                      <button 
+                        style={{ ...s.chipBtn, background: customTopic ? 'var(--primary)' : 'var(--surface)', color: customTopic ? '#fff' : 'var(--muted)' }}
+                        onClick={() => {
+                          if (!customTopic.trim()) return
+                          const customObj = { id: 'custom_entry', label: customTopic, icon: '✏️' }
+                          if (!topics.find(x => x.id === 'custom_entry')) setTopics([...topics, customObj])
+                          else setTopics(topics.map(x => x.id === 'custom_entry' ? customObj : x))
+                        }}>
+                        Add
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -271,9 +295,10 @@ const s = {
   page:         { minHeight: '100vh', background: 'var(--bg)', width: '100%' },
   nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
   navBrand:     { display: 'flex', alignItems: 'center', gap: 10 },
-  logo:         { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
+  logo:         { width: 36, height: 36, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
   navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
   navRight:     { display: 'flex', alignItems: 'center', gap: 15 },
+  navLinkBtn:   { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6 },
   themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
   avatar:       { width: 32, height: 32, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 12 },
   navName:      { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },

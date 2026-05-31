@@ -17,11 +17,10 @@ export default function App() {
   const [sessionId, setSessionId] = useState(null)
   const [loading,   setLoading]   = useState(true)
 
-  // Personalization & Gamification State (with localStorage fallbacks)
-  const [theme,       setTheme]       = useState(localStorage.getItem('theme') || 'light')
-  const [bgColor,     setBgColor]     = useState(localStorage.getItem('bg_color') || '')
-  const [xp,          setXp]          = useState(0)
-  const [level,       setLevel]       = useState(1)
+  const [theme,     setTheme]     = useState(localStorage.getItem('theme') || 'light')
+  const [bgColor,   setBgColor]   = useState(localStorage.getItem('bg_color') || '')
+  const [xp,        setXp]        = useState(0)
+  const [level,     setLevel]     = useState(1)
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -36,8 +35,9 @@ export default function App() {
     })
   }, [])
 
-  // Sync theme to DOM and localStorage
+  // ABSOLUTE THEME SYNC
   useEffect(() => {
+    console.log('Applying theme:', theme)
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
     if (bgColor) {
@@ -45,14 +45,12 @@ export default function App() {
       localStorage.setItem('bg_color', bgColor)
     } else {
       document.documentElement.style.removeProperty('--bg')
-      localStorage.removeItem('bg_color')
     }
   }, [theme, bgColor])
 
   async function loadUserAndGo(authUser) {
     if (!authUser?.id) return
     let { data: prof } = await supabase.from('profiles').select('*').eq('id', authUser.id).maybeSingle()
-    
     if (!prof) {
       const username = authUser.email.split('@')[0]
       const { data: newProf } = await supabase.from('profiles').insert({ 
@@ -61,44 +59,29 @@ export default function App() {
       }).select().single()
       prof = newProf
     }
-    
-    setUser(authUser)
-    setProfile(prof)
-    
+    setUser(authUser); setProfile(prof)
     const meta = prof?.metadata || {}
-    // Priority: DB Preference -> Local Storage -> Default
     if (meta.theme) setTheme(meta.theme)
     if (meta.bg_color) setBgColor(meta.bg_color)
-    setXp(meta.xp || 0)
-    setLevel(meta.level || 1)
-    
+    setXp(meta.xp || 0); setLevel(meta.level || 1)
     setScreen(SCREENS.DASHBOARD)
   }
 
   async function handlePersonalize(newTheme, newColor) {
-    setTheme(newTheme)
-    setBgColor(newColor)
-    // Update local profile state immediately for UI consistency
-    setProfile(prev => ({ 
-      ...prev, 
-      metadata: { ...(prev?.metadata || {}), theme: newTheme, bg_color: newColor } 
-    }))
-    
+    console.log('Toggling theme to:', newTheme)
+    setTheme(newTheme); setBgColor(newColor)
+    setProfile(prev => ({ ...prev, metadata: { ...(prev?.metadata || {}), theme: newTheme, bg_color: newColor } }))
     if (user?.id) {
-      try {
-        const { data } = await supabase.from('profiles').select('metadata').eq('id', user.id).maybeSingle()
-        const updatedMeta = { ...(data?.metadata || {}), theme: newTheme, bg_color: newColor }
-        await supabase.from('profiles').update({ metadata: updatedMeta }).eq('id', user.id)
-      } catch (err) {
-        console.warn('Sync failed:', err)
-      }
+      const { data } = await supabase.from('profiles').select('metadata').eq('id', user.id).maybeSingle()
+      const updatedMeta = { ...(data?.metadata || {}), theme: newTheme, bg_color: newColor }
+      await supabase.from('profiles').update({ metadata: updatedMeta }).eq('id', user.id)
     }
   }
 
   async function handleStart(cfg) {
     if (!user?.id) return
     setConfig(cfg); setHistory([])
-    const { data, error } = await supabase.from('sessions').insert({
+    const { data } = await supabase.from('sessions').insert({
       user_id: user.id, topics: cfg.topicList, level: cfg.level.tag, mode: cfg.mode,
       interview_type: cfg.interviewType, total_questions: cfg.totalQ, completed: false
     }).select().single()
@@ -113,11 +96,9 @@ export default function App() {
     if (sessionId && sessionId !== 'null') {
       await supabase.from('sessions').update({ history: finalHistory, improve_points: allImprove, avg_score: avgScore, completed: true }).eq('id', sessionId)
     }
-    
     const sessionXp = 50 + (finalHistory.length * 10)
     const newXp = xp + sessionXp; const newLvl = Math.floor(newXp / 500) + 1
     setXp(newXp); setLevel(newLvl)
-    
     if (user?.id) {
       const { data: existing } = await supabase.from('profiles').select('metadata').eq('id', user.id).maybeSingle()
       const updatedMeta = { ...(existing?.metadata || {}), xp: newXp, level: newLvl }
@@ -126,23 +107,17 @@ export default function App() {
     setScreen(SCREENS.REPORT)
   }
 
-  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Initializing Platform...</div>
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>
 
   return (
-    <div className="app-container">
+    <div className="app-main">
       {screen === SCREENS.AUTH      && <Auth onAuth={loadUserAndGo} />}
       {screen === SCREENS.DASHBOARD && profile && (
-        <Dashboard 
-          profile={profile} 
-          theme={theme} 
-          bgColor={bgColor} 
-          onStartSession={(cfg) => {
-            if (cfg) { handleStart(cfg) } 
-            else { setScreen(SCREENS.SETUP) }
-          }} 
+        <Dashboard profile={profile} theme={theme} bgColor={bgColor} 
+          onStartSession={() => setScreen(SCREENS.SETUP)} 
           onLogout={() => supabase.auth.signOut()}
           onPersonalize={handlePersonalize}
-          onUpdateProfile={(newProfile) => setProfile(newProfile)}
+          onUpdateProfile={(newProf) => setProfile(newProf)}
           onViewReport={(sess) => {
             setConfig({ level: { tag: sess.level }, topicList: sess.topics, mode: sess.mode, interviewType: sess.interview_type || 'technical' })
             setHistory(sess.history); setSessionId(sess.id); setScreen(SCREENS.REPORT)
