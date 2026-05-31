@@ -55,6 +55,8 @@ const TOPIC_GROUPS = [
   }
 ]
 
+const ALL_BUILTIN_IDS = TOPIC_GROUPS.flatMap(g => g.topics.map(t => t.id))
+
 const Q_OPTIONS   = [5, 10, 15, 20]
 const DIFFICULTIES = [
   { id: 'easy',   label: 'Easy',   color: '#10b981' },
@@ -92,10 +94,10 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
   }, [profile])
 
   function toggleTopic(t) {
-    if (t.id === 'custom_entry') return 
     setTopics(prev => prev.find(x => x.id === t.id) ? prev.filter(x => x.id !== t.id) : [...prev, t])
   }
 
+  const customTopicsOnly = topics.filter(t => !ALL_BUILTIN_IDS.includes(t.id))
   const topicList = topics.map(t => t.label).filter(Boolean).join(', ')
   const canStart  = (level || customYears) && (type === 'behavioral' || type === 'surprise' || topics.length > 0)
 
@@ -142,7 +144,6 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
 
         <div style={{ ...s.grid, gridTemplateColumns: isMobile ? '1fr' : '1fr 440px' }}>
           
-          {/* STEP BY STEP CONFIG */}
           <div style={s.mainCol}>
             
             {/* 01: Seniority */}
@@ -203,9 +204,10 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
                     </div>
                   </div>
                 ))}
-                <div style={s.groupName}>Custom Topic</div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <input type="text" placeholder="Add custom focus..." style={{ ...s.input, flex: 1, margin: 0 }} value={customTopic} onChange={e => setCustomTopic(e.target.value)} />
+                
+                <div style={s.groupName}>Custom Topics</div>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
+                  <input type="text" placeholder="Add custom focus (e.g. ArgoRollouts)..." style={{ ...s.input, flex: 1, margin: 0 }} value={customTopic} onChange={e => setCustomTopic(e.target.value)} />
                   <button 
                     style={{ ...s.actionBtn, background: customTopic ? 'var(--primary)' : 'var(--surface)', color: customTopic ? '#fff' : 'var(--muted)' }}
                     onClick={() => {
@@ -214,14 +216,25 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
                       setCustomTopic('')
                     }}>ADD</button>
                 </div>
+
+                {customTopicsOnly.length > 0 && (
+                  <div style={s.customBox}>
+                    <div style={s.customLabel}>ADDED CUSTOM TOPICS</div>
+                    <div style={s.customGrid}>
+                      {customTopicsOnly.map(t => (
+                        <div key={t.id} style={s.customPill}>
+                          <span>{t.label}</span>
+                          <button style={s.removeBtn} onClick={() => toggleTopic(t)}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* SETTINGS SIDEBAR */}
           <div style={s.sideCol}>
-            
-            {/* 04: Difficulty */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>04</span><div style={s.cardTitle}>Difficulty</div></div>
               <div style={{ display: 'flex', gap: 10 }}>
@@ -234,7 +247,6 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
-            {/* 05: Mode */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>05</span><div style={s.cardTitle}>Mode</div></div>
               <div style={{ display: 'flex', gap: 10 }}>
@@ -249,7 +261,6 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
-            {/* 06: Intensity */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>06</span><div style={s.cardTitle}>Intensity</div></div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -310,5 +321,11 @@ const s = {
   input:        { width: '100%', padding: '12px 16px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--surface2)', fontSize: 14, fontWeight: 600, outline: 'none', color: 'var(--text)', marginTop: 15 },
   groupName:    { fontSize: 10, fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 },
   actionBtn:    { padding: '0 20px', borderRadius: 10, border: '1px solid var(--border)', fontSize: 12, fontWeight: 900, cursor: 'pointer' },
-  launchBtn:    { width: '100%', padding: '20px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 16, fontSize: 16, fontWeight: 950, boxShadow: '0 10px 24px var(--primary-glow)', cursor: 'pointer' }
+  launchBtn:    { width: '100%', padding: '20px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 16, fontSize: 16, fontWeight: 950, boxShadow: '0 10px 24px var(--primary-glow)', cursor: 'pointer' },
+
+  customBox:    { background: 'var(--surface2)', borderRadius: 12, padding: '1rem', border: '1px solid var(--border)' },
+  customLabel:  { fontSize: 9, fontWeight: 900, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 10 },
+  customGrid:   { display: 'flex', flexWrap: 'wrap', gap: 8 },
+  customPill:   { background: 'var(--surface)', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 },
+  removeBtn:    { background: 'none', border: 'none', color: 'var(--primary)', fontSize: 16, fontWeight: 900, padding: 0, lineHeight: 1, cursor: 'pointer' }
 }
