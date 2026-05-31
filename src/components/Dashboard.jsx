@@ -18,10 +18,16 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
   async function loadDashboardData() {
     setLoading(true)
-    const { data: sess } = await supabase.from('sessions').select('*').eq('user_id', profile.id).eq('completed', true).order('created_at', { ascending: false })
-    setSessions(sess || [])
-    const { data: road } = await supabase.from('roadmaps').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
-    setRoadmap(road?.content || null)
+    try {
+      const { data: sess } = await supabase.from('sessions').select('*').eq('user_id', profile.id).eq('completed', true).order('created_at', { ascending: false })
+      setSessions(sess || [])
+      
+      // Safety check for roadmaps table
+      const { data: road, error: roadError } = await supabase.from('roadmaps').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
+      if (!roadError) setRoadmap(road?.content || null)
+    } catch (err) {
+      console.warn('Dashboard data fetch warning:', err.message)
+    }
     setLoading(false)
   }
 
@@ -40,10 +46,10 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const res = await fetch('/api/analyze-resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resumeText: text }) })
       const data = await res.json()
       if (data.result) {
-        // Schema-agnostic update using metadata JSONB
+        // Updated to use metadata to avoid schema errors
         await supabase.from('profiles').update({ 
           resume_text: text, 
-          metadata: { ...data.result } 
+          metadata: { ...(profile.metadata || {}), ...data.result } 
         }).eq('id', profile.id)
         alert('Resume Processed!'); window.location.reload()
       }
@@ -56,16 +62,19 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const res = await fetch('/api/roadmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile, recentSessions: sessions.slice(0, 3), studyTimePref: profile.study_daily_mins || 60 }) })
       const data = await res.json()
       if (data.result) {
-        await supabase.from('roadmaps').insert({ user_id: profile.id, content: data.result }); setRoadmap(data.result)
+        // Ensure table exists before inserting, or handle failure
+        const { error } = await supabase.from('roadmaps').insert({ user_id: profile.id, content: data.result })
+        if (error) throw new Error('Roadmaps table might be missing. Please contact admin.')
+        setRoadmap(data.result)
       }
-    } catch (err) { console.error(err) } finally { setGenerating(false) }
+    } catch (err) { alert(err.message) } finally { setGenerating(false) }
   }
 
   const avgScore = sessions.length > 0 ? (sessions.reduce((acc, s) => acc + (s.avg_score || 0), 0) / sessions.length).toFixed(1) : '0.0'
   const improveHistory = sessions.flatMap(s => (s.improve_points || []).map(p => ({ text: p, date: new Date(s.created_at).toLocaleDateString(), sessionData: s }))).slice(0, 10)
   const meta = profile?.metadata || {}
 
-  if (loading) return <div style={s.loading}>Loading Platform...</div>
+  if (loading) return <div style={s.loading}>Synchronizing Dashboard...</div>
 
   return (
     <div style={s.page}>
@@ -99,8 +108,8 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
             <div style={{ ...s.card, background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)', color: '#fff' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}><span style={{ fontSize: 11, fontWeight: 800 }}>RANK</span><span>🔥 {profile.streak || 1} DAYS</span></div>
-              <div style={{ fontSize: 28, fontWeight: 900 }}>Lvl {profile.level || 1}</div>
-              <div style={s.xpBar}><div style={{ ...s.xpFill, width: `${((profile.xp || 0) % 500) / 5}%` }} /></div>
+              <div style={{ fontSize: 28, fontWeight: 900 }}>Lvl {meta.level || 1}</div>
+              <div style={s.xpBar}><div style={{ ...s.xpFill, width: `${((meta.xp || 0) % 500) / 5}%` }} /></div>
             </div>
 
             <div style={s.card}>

@@ -17,6 +17,7 @@ export default function App() {
   const [sessionId, setSessionId] = useState(null)
   const [loading,   setLoading]   = useState(true)
 
+  // Instant UI State
   const [theme,     setTheme]     = useState('light')
   const [bgColor,   setBgColor]   = useState('')
   const [xp,        setXp]        = useState(0)
@@ -32,6 +33,7 @@ export default function App() {
     })
   }, [])
 
+  // Force Theme Attribute on every change
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     if (bgColor) document.documentElement.style.setProperty('--bg', bgColor)
@@ -42,19 +44,30 @@ export default function App() {
     let { data: prof } = await supabase.from('profiles').select('*').eq('id', authUser.id).maybeSingle()
     if (!prof) {
       const username = authUser.email.split('@')[0]
-      const { data: newProf } = await supabase.from('profiles').insert({ id: authUser.id, username, full_name: username }).select().single()
+      const { data: newProf } = await supabase.from('profiles').insert({ id: authUser.id, username, full_name: username, metadata: { theme: 'light', xp: 0, level: 1 } }).select().single()
       prof = newProf
     }
     setUser(authUser); setProfile(prof)
-    if (prof?.theme) setTheme(prof.theme)
-    if (prof?.bg_color) setBgColor(prof.bg_color)
-    setXp(prof?.xp || 0); setLevel(prof?.level || 1)
+    
+    // Load from metadata to be schema-agnostic
+    const meta = prof?.metadata || {}
+    if (meta.theme) setTheme(meta.theme)
+    if (meta.bg_color) setBgColor(meta.bg_color)
+    setXp(meta.xp || 0); setLevel(meta.level || 1)
+    
     setScreen(SCREENS.DASHBOARD)
   }
 
   async function handlePersonalize(newTheme, newColor) {
     setTheme(newTheme); setBgColor(newColor)
-    if (user?.id) await supabase.from('profiles').update({ theme: newTheme, bg_color: newColor }).eq('id', user.id)
+    // Update local profile state too
+    setProfile(prev => ({ ...prev, metadata: { ...(prev?.metadata || {}), theme: newTheme, bg_color: newColor } }))
+    
+    if (user?.id) {
+      const { data: existing } = await supabase.from('profiles').select('metadata').eq('id', user.id).single()
+      const updatedMeta = { ...(existing?.metadata || {}), theme: newTheme, bg_color: newColor }
+      await supabase.from('profiles').update({ metadata: updatedMeta }).eq('id', user.id)
+    }
   }
 
   async function handleStart(cfg) {
@@ -76,11 +89,14 @@ export default function App() {
     const sessionXp = 50 + (finalHistory.length * 10)
     const newXp = xp + sessionXp; const newLvl = Math.floor(newXp / 500) + 1
     setXp(newXp); setLevel(newLvl)
-    await supabase.from('profiles').update({ xp: newXp, level: newLvl }).eq('id', user.id)
+    
+    const { data: existing } = await supabase.from('profiles').select('metadata').eq('id', user.id).single()
+    const updatedMeta = { ...(existing?.metadata || {}), xp: newXp, level: newLvl }
+    await supabase.from('profiles').update({ metadata: updatedMeta }).eq('id', user.id)
     setScreen(SCREENS.REPORT)
   }
 
-  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Initializing Engine...</div>
 
   return (
     <>
