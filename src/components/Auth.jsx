@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
 export default function Auth({ onAuth }) {
@@ -10,6 +10,13 @@ export default function Auth({ onAuth }) {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
   const [success, setSuccess] = useState('')
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -43,102 +50,82 @@ export default function Auth({ onAuth }) {
 
   return (
     <div style={s.page}>
-      <div style={s.left}>
-        <div style={s.brand}>
+      {/* PROFESSIONAL NAVBAR (Interview Style) */}
+      <nav style={s.nav}>
+        <div style={s.navLeft}>
           <div style={s.logo}>DI</div>
-          <h1 style={s.brandName}>DevOps Interview</h1>
-          <p style={s.brandSub}>AI-powered mock interviews for DevOps engineers</p>
+          <span style={s.navTitle}>{isMobile ? 'Platform' : 'DevOps Career Platform'}</span>
         </div>
-        <div style={s.features}>
-          {[
-            { icon: '🎙️', title: 'Voice & Text Modes', desc: 'Practice like a real interview' },
-            { icon: '🤖', title: 'AI Interviewer', desc: 'Natural conversation, real feedback' },
-            { icon: '📊', title: 'Session Reports', desc: 'Track progress, improve faster' },
-            { icon: '☁️', title: '20+ DevOps Topics', desc: 'AWS, K8s, Terraform and more' },
-          ].map(f => (
-            <div key={f.title} style={s.feature}>
-              <span style={s.featureIcon}>{f.icon}</span>
-              <div>
-                <div style={s.featureTitle}>{f.title}</div>
-                <div style={s.featureDesc}>{f.desc}</div>
-              </div>
+        {!isMobile && <div style={s.navRight}><span style={s.badge}>SYSTEM SECURE</span></div>}
+      </nav>
+
+      <div style={s.container}>
+        <div style={s.hero}>
+          <h1 style={s.heroTitle}>Initialize <span style={{ color: 'var(--primary)' }}>Identity</span></h1>
+          <p style={s.heroSub}>Access your high-density DevOps career simulation and performance dashboard.</p>
+        </div>
+
+        <div style={{ ...s.authCard, maxWidth: isMobile ? '100%' : '500px' }}>
+          <div className="card" style={{ padding: isMobile ? '1.5rem' : '2.5rem' }}>
+            <div style={s.tabs}>
+              {['login', 'register'].map(t => (
+                <button key={t} style={{ ...s.tab, ...(tab === t ? s.tabActive : {}) }} onClick={() => { setTab(t); setError(''); setSuccess('') }}>
+                  {t === 'login' ? 'SIGN IN' : 'REGISTER'}
+                </button>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
 
-      <div style={s.right}>
-        <div style={s.card}>
-          <div style={s.tabs}>
-            {['login', 'register'].map(t => (
-              <button key={t} style={{ ...s.tab, ...(tab === t ? s.tabActive : {}) }} onClick={() => { setTab(t); setError(''); setSuccess('') }}>
-                {t === 'login' ? 'Sign In' : 'Create Account'}
-              </button>
-            ))}
+            {error   && <div style={s.errorBox}>{error}</div>}
+            {success && <div style={s.successBox}>{success}</div>}
+
+            {tab === 'login' ? (
+              <form onSubmit={handleLogin}>
+                <div style={s.field}><label style={s.label}>Work Email</label><input style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="engineer@domain.com" /></div>
+                <div style={s.field}><label style={s.label}>Terminal Password</label><input style={s.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" /></div>
+                <button style={s.submitBtn} disabled={loading}>{loading ? 'SYNCING...' : 'INITIATE TERMINAL →'}</button>
+              </form>
+            ) : (
+              <form onSubmit={handleRegister}>
+                <div style={s.field}><label style={s.label}>Full Name</label><input style={s.input} value={fullName} onChange={e => setFullName(e.target.value)} required placeholder="Arun Selvan" /></div>
+                <div style={s.field}><label style={s.label}>Identity Handle</label><input style={s.input} value={username} onChange={e => setUsername(e.target.value)} required placeholder="arun_sre" /></div>
+                <div style={s.field}><label style={s.label}>Work Email</label><input style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="engineer@domain.com" /></div>
+                <div style={s.field}><label style={s.label}>Security Key</label><input style={s.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Min. 6 characters" /></div>
+                <button style={s.submitBtn} disabled={loading}>{loading ? 'PROVISIONING...' : 'CREATE IDENTITY →'}</button>
+              </form>
+            )}
           </div>
-
-          {error   && <div style={s.errorBox}>{error}</div>}
-          {success && <div style={s.successBox}>{success}</div>}
-
-          {tab === 'login' ? (
-            <form onSubmit={handleLogin}>
-              <Field label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" />
-              <Field label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
-              <button style={s.btn} disabled={loading}>{loading ? 'Signing in...' : 'Sign In'}</button>
-            </form>
-          ) : (
-            <form onSubmit={handleRegister}>
-              <Field label="Full Name" value={fullName} onChange={setFullName} placeholder="Arun Selvan" />
-              <Field label="Username" value={username} onChange={setUsername} placeholder="arunselvan" />
-              <Field label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" />
-              <Field label="Password" type="password" value={password} onChange={setPassword} placeholder="Min. 6 characters" />
-              <button style={s.btn} disabled={loading}>{loading ? 'Creating account...' : 'Create Account'}</button>
-            </form>
-          )}
-
-          <p style={s.switchText}>
-            {tab === 'login' ? "Don't have an account? " : 'Already have an account? '}
-            <span style={s.link} onClick={() => { setTab(tab === 'login' ? 'register' : 'login'); setError(''); setSuccess('') }}>
-              {tab === 'login' ? 'Sign up' : 'Sign in'}
-            </span>
-          </p>
+          <p style={s.footerText}>Secure Session · Professional DevOps Assessment</p>
         </div>
       </div>
-    </div>
-  )
-}
-
-function Field({ label, type = 'text', value, onChange, placeholder }) {
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <label style={s.label}>{label}</label>
-      <input style={s.input} type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} required />
     </div>
   )
 }
 
 const s = {
-  page:        { display: 'flex', minHeight: '100vh', background: '#fff' },
-  left:        { flex: 1, background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)', padding: '3rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', color: '#fff' },
-  brand:       { marginBottom: '3rem' },
-  logo:        { width: 52, height: 52, background: 'rgba(255,255,255,0.2)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, marginBottom: 16, backdropFilter: 'blur(10px)' },
-  brandName:   { fontSize: 28, fontWeight: 800, marginBottom: 8 },
-  brandSub:    { fontSize: 15, opacity: 0.8, lineHeight: 1.6 },
-  features:    { display: 'flex', flexDirection: 'column', gap: 20 },
-  feature:     { display: 'flex', alignItems: 'flex-start', gap: 14 },
-  featureIcon: { fontSize: 24, marginTop: 2 },
-  featureTitle:{ fontSize: 15, fontWeight: 600, marginBottom: 2 },
-  featureDesc: { fontSize: 13, opacity: 0.75 },
-  right:       { width: 460, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#f8fafc' },
-  card:        { width: '100%', background: '#fff', borderRadius: 16, padding: '2rem', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' },
-  tabs:        { display: 'flex', gap: 4, background: '#f1f5f9', borderRadius: 10, padding: 4, marginBottom: 24 },
-  tab:         { flex: 1, padding: '10px', border: 'none', borderRadius: 7, background: 'transparent', color: '#64748b', fontWeight: 500, fontSize: 14, cursor: 'pointer', transition: 'all 0.2s' },
-  tabActive:   { background: '#fff', color: '#0f172a', fontWeight: 600, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
-  label:       { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 },
-  input:       { width: '100%', padding: '11px 14px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 14, color: '#0f172a', outline: 'none', transition: 'border-color 0.2s', background: '#fff' },
-  btn:         { width: '100%', padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer', marginTop: 8, transition: 'background 0.2s' },
-  errorBox:    { background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#dc2626', marginBottom: 16 },
-  successBox:  { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#16a34a', marginBottom: 16 },
-  switchText:  { textAlign: 'center', marginTop: 20, fontSize: 13, color: '#64748b' },
-  link:        { color: '#2563eb', fontWeight: 600, cursor: 'pointer' },
+  page:         { minHeight: '100vh', background: 'var(--bg)', width: '100%', overflowX: 'hidden' },
+  nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 1.5rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
+  navLeft:      { display: 'flex', alignItems: 'center', gap: 12 },
+  logo:         { width: 34, height: 34, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 14 },
+  navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
+  navRight:     { display: 'flex', alignItems: 'center' },
+  badge:        { fontSize: 10, fontWeight: 900, color: 'var(--green)', padding: '4px 10px', background: 'var(--green-l)', borderRadius: 6, letterSpacing: '0.05em' },
+  
+  container:    { maxWidth: 1200, margin: '0 auto', padding: '3rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  hero:         { textAlign: 'center', marginBottom: '3rem' },
+  heroTitle:    { fontSize: 'clamp(32px, 6vw, 48px)', fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.04em' },
+  heroSub:      { fontSize: 18, color: 'var(--muted)', marginTop: 12, lineHeight: 1.6, maxWidth: 550, margin: '12px auto 0' },
+  
+  authCard:     { width: '100%' },
+  tabs:         { display: 'flex', gap: 8, background: 'var(--surface2)', padding: 6, borderRadius: 12, marginBottom: 30 },
+  tab:          { flex: 1, padding: '14px', borderRadius: 9, fontSize: 12, fontWeight: 900, color: 'var(--muted)', background: 'transparent' },
+  tabActive:    { background: 'var(--surface)', color: 'var(--primary)', boxShadow: 'var(--shadow)' },
+  
+  field:        { marginBottom: 20 },
+  label:        { display: 'block', fontSize: 10, fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.08em' },
+  input:        { width: '100%', padding: '14px 16px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 15, outline: 'none' },
+  
+  submitBtn:    { width: '100%', padding: '18px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 15, fontWeight: 900, marginTop: 15, boxShadow: '0 10px 24px var(--primary-glow)' },
+  errorBox:     { padding: '14px', background: 'var(--red-l)', color: 'var(--red)', borderRadius: 10, fontSize: 13, fontWeight: 700, marginBottom: 25, border: '1px solid var(--red)' },
+  successBox:   { padding: '14px', background: 'var(--green-l)', color: 'var(--green)', borderRadius: 10, fontSize: 13, fontWeight: 700, marginBottom: 25, border: '1px solid var(--green)' },
+  footerText:   { textAlign: 'center', fontSize: 10, fontWeight: 800, color: 'var(--muted2)', marginTop: 25, textTransform: 'uppercase', letterSpacing: '0.1em' }
 }
