@@ -7,12 +7,18 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'DevOps Interview Prep',
         short_name: 'DevOpsPrep',
-        description: 'AI-Powered DevOps Interview Simulator & Career Platform',
+        description: 'AI-Powered DevOps Career Platform',
         theme_color: '#2563eb',
-        icons: [] // Temporarily empty to stop 404s until actual icons are uploaded
+        background_color: '#f0f4f8',
+        display: 'standalone',
+        icons: [] // Re-add icons once images are in public/
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
       }
     })
   ]

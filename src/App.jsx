@@ -229,16 +229,26 @@ export default function App() {
           }}
         />
       )}
-      {screen === SCREENS.SETUP     && <Setup profile={profile} onStart={handleStart} onLogout={handleLogout} onGoBack={() => setScreen(SCREENS.DASHBOARD)} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />}
+      {screen === SCREENS.SETUP     && <Setup profile={profile} onStart={handleStart} onLogout={handleLogout} onGoBack={() => setScreen(SCREENS.DASHBOARD)} theme={theme} onPersonalize={handlePersonalize} bgColor={bgColor} />}
       {screen === SCREENS.INTERVIEW && config && (
-        <Interview config={config} profile={profile} onComplete={handleComplete} onSaveSession={handleSaveSession} />
+        <Interview 
+          config={config} 
+          profile={profile} 
+          onComplete={handleComplete} 
+          onSaveSession={handleSaveSession} 
+          theme={theme} 
+          onPersonalize={handlePersonalize} 
+          bgColor={bgColor}
+          onGoHome={() => setScreen(SCREENS.DASHBOARD)}
+        />
       )}
       {screen === SCREENS.REPORT    && config && (
         <Report history={history} config={config} profile={profile}
           onRestart={() => setScreen(SCREENS.SETUP)}
           onGoHome={() => setScreen(SCREENS.DASHBOARD)}
-          sidebarOpen={sidebarOpen}
-          onToggleSidebar={toggleSidebar}
+          theme={theme} 
+          onPersonalize={handlePersonalize} 
+          bgColor={bgColor}
         />
       )}
     </>

@@ -39,13 +39,17 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const res = await fetch('/api/analyze-resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resumeText: text }) })
       const data = await res.json()
       if (data.result) {
-        await supabase.from('profiles').update({ 
+        const { summary, skills, recommendedTopics, experienceLevel, suggestedCourses } = data.result
+        const { error: upError } = await supabase.from('profiles').update({ 
           resume_text: text, 
-          suggested_skills: data.result.skills, 
-          experience_level: data.result.experienceLevel, 
-          metadata: { ...data.result } 
+          suggested_skills: skills, 
+          experience_level: experienceLevel, 
+          metadata: { summary, recommendedTopics, suggestedCourses } 
         }).eq('id', profile.id)
-        alert('Analyzed!'); window.location.reload()
+        
+        if (upError) throw upError
+        alert('Analysis complete and profile updated!'); 
+        window.location.reload()
       }
     } catch (err) { alert(err.message) } finally { setAnalyzing(false) }
   }

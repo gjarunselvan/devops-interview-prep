@@ -278,6 +278,7 @@ const s = {
   page:             { minHeight: '100vh', background: 'var(--bg)' },
   nav:              { background: '#fff', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
   navLeft:          { display: 'flex', alignItems: 'center', gap: 10 },
+  backBtn:          { padding: '5px 10px', background: 'none', border: '1.5px solid var(--border)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginRight: 10 },
   logo:             { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13 },
   navTitle:         { fontWeight: 700, fontSize: 15 },
   navRight:         { display: 'flex', alignItems: 'center', gap: 12 },
