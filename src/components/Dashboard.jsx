@@ -71,6 +71,9 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
           <span style={s.navTitle}>DevOps Interview</span>
         </div>
         <div style={s.navRight}>
+          <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
           <div style={s.avatar}>{profile?.full_name?.[0] || 'U'}</div>
           <span style={s.navName}>{profile?.full_name}</span>
           <button style={s.logoutBtn} onClick={onLogout}>Sign out</button>
@@ -210,6 +213,7 @@ const s = {
   logo:         { width: 36, height: 36, background: 'var(--primary)', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 14 },
   navTitle:     { fontWeight: 700, fontSize: 16, color: 'var(--text)' },
   navRight:     { display: 'flex', alignItems: 'center', gap: 12 },
+  themeToggle:  { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: 4 },
   avatar:       { width: 34, height: 34, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 700, fontSize: 14 },
   navName:      { fontSize: 14, fontWeight: 500, color: 'var(--text2)' },
   logoutBtn:    { padding: '6px 14px', border: '1.5px solid var(--border)', borderRadius: 7, background: '#fff', color: 'var(--muted)', fontSize: 13, fontWeight: 500, cursor: 'pointer' },

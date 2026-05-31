@@ -45,7 +45,7 @@ function scoreColor(score) {
   return 'var(--red)'
 }
 
-export default function Interview({ config, profile, onComplete, onSaveSession }) {
+export default function Interview({ config, profile, onComplete, onSaveSession, theme, onPersonalize, bgColor }) {
   const { level, topicList, mode, sessionType, totalQ, timeTarget, interviewType } = config
 
   const [question,  setQuestion]  = useState('')
@@ -201,6 +201,9 @@ export default function Interview({ config, profile, onComplete, onSaveSession }
           <span style={s.navTitle}>DevOps Interview</span>
         </div>
         <div style={s.navRight}>
+          <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
           {sessionType === 'time' ? <div style={s.timer}>⏱ {fmtTime(timeLeft)}</div> : <div style={s.qCounter}>Q {qIndex + 1} / {totalQ}</div>}
           <button style={s.endBtn} onClick={handleEndSession}>End Session</button>
         </div>
@@ -278,6 +281,7 @@ const s = {
   logo:             { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13 },
   navTitle:         { fontWeight: 700, fontSize: 15 },
   navRight:         { display: 'flex', alignItems: 'center', gap: 12 },
+  themeToggle:      { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: 4 },
   timer:            { fontFamily: 'JetBrains Mono,monospace', fontSize: 14, fontWeight: 700 },
   qCounter:         { fontFamily: 'JetBrains Mono,monospace', fontSize: 13, color: 'var(--primary)', fontWeight: 600 },
   endBtn:           { padding: '6px 14px', border: '1.5px solid var(--border)', borderRadius: 7, background: '#fff', color: 'var(--muted)', fontSize: 13, fontWeight: 500, cursor: 'pointer' },

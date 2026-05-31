@@ -12,7 +12,7 @@ function scoreBg(score) {
   return 'var(--red-l)'
 }
 
-export default function Report({ history, config, profile, onRestart, onGoHome }) {
+export default function Report({ history, config, profile, onRestart, onGoHome, theme, onPersonalize, bgColor }) {
   const [copied, setCopied] = useState(false)
   const [expanded, setExpanded] = useState(null)
 
@@ -49,6 +49,9 @@ export default function Report({ history, config, profile, onRestart, onGoHome }
           <span style={s.navTitle}>DevOps Interview</span>
         </div>
         <div style={s.navRight}>
+          <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
           <button style={s.outlineBtn} onClick={onGoHome}>Dashboard</button>
           <button style={s.primaryBtn} onClick={onRestart}>New Session</button>
         </div>
@@ -114,7 +117,8 @@ const s = {
   navBrand:    { display: 'flex', alignItems: 'center', gap: 10 },
   logo:        { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13 },
   navTitle:    { fontWeight: 700, fontSize: 15 },
-  navRight:    { display: 'flex', gap: 10 },
+  navRight:    { display: 'flex', alignItems: 'center', gap: 10 },
+  themeToggle: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: 4 },
   outlineBtn:  { padding: '7px 14px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', color: 'var(--muted)', fontSize: 13, fontWeight: 500, cursor: 'pointer' },
   primaryBtn:  { padding: '7px 16px', border: 'none', borderRadius: 8, background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
   content:     { maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem' },
