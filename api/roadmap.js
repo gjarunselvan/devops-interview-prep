@@ -10,23 +10,23 @@ export default async function handler(req, res) {
 
   const { profile, recentSessions, studyTimePref } = req.body
 
-  const prompt = `You are a DevOps Mentor. Create a personalized study roadmap for a candidate.
+  const prompt = `You are a DevOps Mentor. Create a personalized daily study roadmap for a candidate for 1 week.
 
 Candidate Profile:
-- Level: ${profile.experienceLevel || 'Not specified'}
-- Recommended Skills: ${profile.suggested_skills?.join(', ') || 'General DevOps'}
-- Time Availability: ${studyTimePref} hours per week
+- Level: ${profile.experience_level || 'Not specified'}
+- Recommended Topics: ${profile.metadata?.recommendedTopics?.join(', ') || 'General DevOps'}
+- Daily Study Commitment: ${studyTimePref} minutes per day
 
 Recent Performance/Weak Points:
 ${recentSessions?.map(s => `- Avg Score: ${s.avg_score}/10, Points to improve: ${s.improve_points?.join(', ')}`).join('\n') || 'No recent sessions.'}
 
-Create a structured study plan for 1 week.
+Create a structured study plan for 7 days (Monday to Sunday). Ensure the tasks fit within the ${studyTimePref} minutes daily limit.
 
 Respond in EXACTLY this JSON format:
 {
   "focus": "Overall focus of the week",
   "days": [
-    { "day": "Monday", "tasks": ["Task 1", "Task 2"], "resourceHint": "Topic to search for" },
+    { "day": "Monday", "tasks": ["Task 1 (X mins)", "Task 2 (Y mins)"], "resourceHint": "Topic to search for" },
     ...
   ]
 }`

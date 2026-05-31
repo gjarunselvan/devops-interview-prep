@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const LEVELS = [
   { id: '0-1', label: '0–1 years', tag: 'Fresher',             color: '#10b981' },
@@ -64,19 +64,42 @@ export default function Setup({ profile, onStart, onLogout, onGoBack }) {
   const [sessionType, setSessionType] = useState('questions')
   const [qTarget,     setQTarget]     = useState(10)
   const [timeTarget,  setTimeTarget]  = useState(30)
-  const [studyTime,   setStudyTime]   = useState(10)
+  const [studyTime,   setStudyTime]   = useState(profile?.study_daily_mins || 60)
+  const [customQ,     setCustomQ]     = useState('')
+  const [customT,     setCustomT]     = useState('')
+
+  // Pre-fill topics from profile recommendations
+  useEffect(() => {
+    const recommended = profile?.metadata?.recommendedTopics || []
+    const initialTopics = []
+    TOPIC_GROUPS.forEach(group => {
+      group.topics.forEach(t => {
+        if (recommended.includes(t.id)) {
+          initialTopics.push(t)
+        }
+      })
+    })
+    if (initialTopics.length > 0) setTopics(initialTopics)
+    
+    // Also pre-fill level if available
+    if (profile?.experience_level) {
+      const foundLevel = LEVELS.find(l => l.tag === profile.experience_level || l.id === profile.experience_level)
+      if (foundLevel) setLevel(foundLevel)
+    }
+  }, [profile])
 
   function toggleTopic(t) {
     setTopics(prev => prev.find(x => x.id === t.id) ? prev.filter(x => x.id !== t.id) : [...prev, t])
   }
 
   const topicList = topics.map(t => t.label).join(', ')
-  const totalQ    = sessionType === 'questions' ? qTarget : null
+  const finalQ    = sessionType === 'questions' ? (parseInt(customQ) || qTarget) : null
+  const finalT    = sessionType === 'time' ? (parseInt(customT) || timeTarget) : null
   const canStart  = level && topics.length > 0
 
   function handleStart() {
     if (!canStart) return
-    onStart({ level, topics, topicList, mode, sessionType, totalQ, timeTarget, studyTime })
+    onStart({ level, topics, topicList, mode, sessionType, totalQ: finalQ, timeTarget: finalT, studyTime })
   }
 
   return (
@@ -114,7 +137,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack }) {
                     style={{ 
                       ...s.levelBtn, 
                       borderColor: level?.id === l.id ? l.color : 'var(--border)', 
-                      background: level?.id === l.id ? `${l.color}10` : '#fff', 
+                      background: level?.id === l.id ? `${l.color}10` : 'var(--surface)', 
                       color: level?.id === l.id ? l.color : 'var(--text-2)' 
                     }}
                     onClick={() => setLevel(l)}>
@@ -140,7 +163,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack }) {
                             style={{ 
                               ...s.topicBtn, 
                               borderColor: sel ? 'var(--primary)' : 'var(--border)', 
-                              background: sel ? 'var(--primary-l)' : '#fff', 
+                              background: sel ? 'var(--primary-l)' : 'var(--surface)', 
                               color: sel ? 'var(--primary)' : 'var(--text-2)' 
                             }}
                             onClick={() => toggleTopic(t)}>
@@ -169,7 +192,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack }) {
                     style={{ 
                       ...s.modeBtn, 
                       borderColor: mode === m.id ? 'var(--primary)' : 'var(--border)', 
-                      background: mode === m.id ? 'var(--primary-l)' : '#fff' 
+                      background: mode === m.id ? 'var(--primary-l)' : 'var(--surface)' 
                     }}
                     onClick={() => setMode(m.id)}>
                     <span style={s.modeIcon}>{m.icon}</span>
@@ -195,22 +218,32 @@ export default function Setup({ profile, onStart, onLogout, onGoBack }) {
                   <button key={val}
                     style={{ 
                       ...s.optionBtn, 
-                      borderColor: (sessionType === 'questions' ? qTarget : timeTarget) === val ? 'var(--primary)' : 'var(--border)',
-                      background: (sessionType === 'questions' ? qTarget : timeTarget) === val ? 'var(--primary-l)' : '#fff'
+                      borderColor: (sessionType === 'questions' ? (customQ ? '' : qTarget) : (customT ? '' : timeTarget)) === val ? 'var(--primary)' : 'var(--border)',
+                      background: (sessionType === 'questions' ? (customQ ? '' : qTarget) : (customT ? '' : timeTarget)) === val ? 'var(--primary-l)' : 'var(--surface)'
                     }}
-                    onClick={() => sessionType === 'questions' ? setQTarget(val) : setTimeTarget(val)}>
+                    onClick={() => {
+                      if (sessionType === 'questions') { setQTarget(val); setCustomQ('') }
+                      else { setTimeTarget(val); setCustomT('') }
+                    }}>
                     {val}{sessionType === 'questions' ? ' Qs' : ' min'}
                   </button>
                 ))}
               </div>
+              <input 
+                style={s.customInput} 
+                type="number" 
+                placeholder={`Custom ${sessionType === 'questions' ? 'questions' : 'minutes'}...`}
+                value={sessionType === 'questions' ? customQ : customT}
+                onChange={e => sessionType === 'questions' ? setCustomQ(e.target.value) : setCustomT(e.target.value)}
+              />
             </div>
 
             <div style={s.card}>
-              <h3 style={s.cardTitle}>5. Study Commitment</h3>
-              <p style={s.cardSub}>Weekly study hours for your roadmap</p>
+              <h3 style={s.cardTitle}>5. Daily Commitment</h3>
+              <p style={s.cardSub}>Minutes per day for your study roadmap</p>
               <div style={s.timeInputRow}>
-                <input type="range" min="5" max="40" step="5" value={studyTime} onChange={e => setStudyTime(e.target.value)} style={s.range} />
-                <span style={s.timeVal}>{studyTime}h/week</span>
+                <input type="range" min="15" max="240" step="15" value={studyTime} onChange={e => setStudyTime(e.target.value)} style={s.range} />
+                <span style={s.timeVal}>{studyTime}m/day</span>
               </div>
             </div>
 
@@ -227,25 +260,25 @@ export default function Setup({ profile, onStart, onLogout, onGoBack }) {
 const s = {
   page: { minHeight: '100vh', background: 'var(--bg)' },
   container: { maxWidth: 1200, margin: '0 auto', padding: '0 1.5rem' },
-  nav: { background: '#fff', borderBottom: '1px solid var(--border)', padding: '0.75rem 0', position: 'sticky', top: 0, zIndex: 100 },
+  nav: { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0.75rem 0', position: 'sticky', top: 0, zIndex: 100 },
   navContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   navLeft: { display: 'flex', alignItems: 'center', gap: '1.5rem' },
-  backBtn: { background: 'none', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500 },
-  navTitle: { fontWeight: 700, fontSize: 16 },
+  backBtn: { background: 'none', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500, color: 'var(--text)' },
+  navTitle: { fontWeight: 700, fontSize: 16, color: 'var(--text)' },
   navRight: { display: 'flex', alignItems: 'center', gap: '1rem' },
   navName: { fontSize: 14, fontWeight: 500, color: 'var(--text-2)' },
   logoutBtn: { background: 'none', border: 'none', color: 'var(--muted)', fontSize: 13, cursor: 'pointer' },
   hero: { padding: '3rem 0 2rem' },
-  heroTitle: { fontSize: '2.5rem', fontWeight: 800 },
+  heroTitle: { fontSize: '2.5rem', fontWeight: 800, color: 'var(--text)' },
   accent: { color: 'var(--primary)' },
   heroSub: { color: 'var(--muted)', fontSize: '1.1rem', marginTop: '0.5rem' },
   grid: { display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem' },
   mainCol: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
   sideCol: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-  card: { background: '#fff', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' },
+  card: { background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' },
   cardTitle: { fontSize: 16, fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text)' },
   levelGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem' },
-  levelBtn: { padding: '1rem 0.5rem', borderRadius: 12, border: '2px solid', textAlign: 'center', cursor: 'pointer' },
+  levelBtn: { padding: '1rem 0.5rem', borderRadius: 12, border: '2px solid', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s' },
   levelLabel: { fontWeight: 700, fontSize: 14 },
   levelTag: { fontSize: 10, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' },
   groupsStack: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
@@ -255,15 +288,16 @@ const s = {
   topicIcon: { fontSize: '1.5rem', marginBottom: 6 },
   topicLabel: { fontSize: 11, fontWeight: 600 },
   modeGrid: { display: 'flex', gap: '0.75rem' },
-  modeBtn: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0.75rem', borderRadius: 10, border: '2px solid' },
+  modeBtn: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0.75rem', borderRadius: 10, border: '2px solid', color: 'var(--text)' },
   modeTitle: { fontWeight: 600, fontSize: 14 },
   typeTabs: { display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '1rem' },
   tab: { padding: '8px 0', background: 'none', border: 'none', fontWeight: 600, fontSize: 14, cursor: 'pointer' },
   optionGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' },
-  optionBtn: { padding: '8px', borderRadius: 8, border: '1px solid', fontWeight: 500, fontSize: 13 },
+  optionBtn: { padding: '8px', borderRadius: 8, border: '1px solid', fontWeight: 500, fontSize: 13, color: 'var(--text)' },
+  customInput: { width: '100%', marginTop: '0.75rem', padding: '10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', outline: 'none' },
   cardSub: { fontSize: 12, color: 'var(--muted)', marginBottom: '1rem' },
   timeInputRow: { display: 'flex', alignItems: 'center', gap: '1rem' },
   range: { flex: 1 },
-  timeVal: { fontWeight: 700, fontSize: 14, minWidth: 60 },
+  timeVal: { fontWeight: 700, fontSize: 14, minWidth: 60, color: 'var(--text)' },
   startBtn: { background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 12, padding: '1rem', fontWeight: 700, fontSize: 16, cursor: 'pointer', boxShadow: 'var(--shadow-lg)' }
 }

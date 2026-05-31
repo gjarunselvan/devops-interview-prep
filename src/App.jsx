@@ -17,6 +17,10 @@ export default function App() {
   const [sessionId, setSessionId] = useState(null)
   const [loading,   setLoading]   = useState(true)
 
+  // Personalization State
+  const [theme,     setTheme]     = useState('light')
+  const [bgColor,   setBgColor]   = useState('')
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
@@ -29,6 +33,15 @@ export default function App() {
       if (!session) { setUser(null); setProfile(null); setScreen(SCREENS.AUTH) }
     })
   }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    if (bgColor) {
+      document.documentElement.style.setProperty('--bg', bgColor)
+    } else {
+      document.documentElement.style.removeProperty('--bg')
+    }
+  }, [theme, bgColor])
 
   async function loadUserAndGo(authUser) {
     // Get or auto-create profile
@@ -50,6 +63,10 @@ export default function App() {
 
     setUser(authUser)
     setProfile(profile || { full_name: authUser.email, username: authUser.email })
+    
+    // Set personalization from profile
+    if (profile?.theme) setTheme(profile.theme)
+    if (profile?.bg_color) setBgColor(profile.bg_color)
 
     // Check for incomplete session
     const { data: incompleteArr } = await supabase

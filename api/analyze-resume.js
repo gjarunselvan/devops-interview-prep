@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   if (!resumeText) return res.status(400).json({ result: 'ERROR: No resume text provided.' })
 
   const prompt = `You are a technical career coach and DevOps expert. 
-Analyze the following resume text and identify the candidate's core skills, strengths, and most importantly, recommend a "Tech Stack" focus for their interview preparation.
+Analyze the following resume text and identify the candidate's core skills, strengths, and most importantly, recommend a "Tech Stack" focus and specific courses/topics to learn.
 
 Resume Text:
 ${resumeText}
@@ -22,10 +22,11 @@ Respond in EXACTLY this JSON format:
   "summary": "2-3 sentence overview of their experience",
   "skills": ["Skill 1", "Skill 2", ...],
   "recommendedTopics": ["topic_id1", "topic_id2", ...],
-  "experienceLevel": "Junior/Mid/Senior/Architect"
+  "experienceLevel": "Junior/Mid/Senior/Architect",
+  "suggestedCourses": ["Course or deep-dive topic 1", "Course or deep-dive topic 2", ...]
 }
 
-Use these IDs for recommendedTopics where applicable: aws, kubernetes, docker, terraform, ansible, cicd, linux, git, monitoring, security, networking, gcp, azure, helm, argocd, jenkins, prometheus, elk, vault, mlops.`
+Use these IDs for recommendedTopics where applicable: aws, gcp, azure, kubernetes, docker, helm, argocd, terraform, ansible, linux, cicd, jenkins, git, monitoring, prometheus, elk, security, vault, mlops.`
 
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {

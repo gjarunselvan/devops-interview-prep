@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
+import * as pdfjsLib from 'pdfjs-dist'
+import mammoth from 'mammoth'
+
+// Set worker for PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
 export default function Dashboard({ profile, onStartSession, onLogout }) {
   const [sessions, setSessions] = useState([])
   const [roadmap, setRoadmap] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [resumeText, setResumeText] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [theme, setTheme] = useState(profile?.theme || 'light')
+  const [bgColor, setBgColor] = useState(profile?.bg_color || '')
 
   useEffect(() => {
     loadDashboardData()
@@ -36,28 +42,65 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
     setLoading(false)
   }
 
-  async function handleAnalyzeResume() {
-    if (!resumeText.trim()) return
+  async function updatePersonalization(newTheme, newColor) {
+    setTheme(newTheme)
+    setBgColor(newColor)
+    document.documentElement.setAttribute('data-theme', newTheme)
+    if (newColor) {
+      document.documentElement.style.setProperty('--bg', newColor)
+    } else {
+      document.documentElement.style.removeProperty('--bg')
+    }
+    await supabase.from('profiles').update({ theme: newTheme, bg_color: newColor }).eq('id', profile.id)
+  }
+
+  async function handleFileUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+
     setAnalyzing(true)
     try {
+      let text = ''
+      if (file.type === 'application/pdf') {
+        const arrayBuffer = await file.arrayBuffer()
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+        let fullText = ''
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const content = await page.getTextContent()
+          fullText += content.items.map(item => item.str).join(' ') + '\n'
+        }
+        text = fullText
+      } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const arrayBuffer = await file.arrayBuffer()
+        const result = await mammoth.extractRawText({ arrayBuffer })
+        text = result.value
+      } else {
+        alert('Please upload a PDF or DOCX file.')
+        setAnalyzing(false)
+        return
+      }
+
       const res = await fetch('/api/analyze-resume', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeText })
+        body: JSON.stringify({ resumeText: text })
       })
       const data = await res.json()
       if (data.result) {
-        const { summary, skills, recommendedTopics, experienceLevel } = data.result
+        const { summary, skills, recommendedTopics, experienceLevel, suggestedCourses } = data.result
         await supabase.from('profiles').update({
-          resume_text: resumeText,
+          resume_text: text,
           suggested_skills: skills,
           experience_level: experienceLevel,
-          metadata: { summary, recommendedTopics }
+          metadata: { summary, recommendedTopics, suggestedCourses }
         }).eq('id', profile.id)
-        alert('Resume analyzed! Your suggested topics have been updated.')
+        alert('Resume analyzed! Your profile and roadmap recommendations have been updated.')
+        window.location.reload() // Refresh to update pre-filled topics in Setup
       }
     } catch (err) {
-      console.error(err)
+      console.error('Parsing error:', err)
+      alert('Failed to parse file. Please try pasting the text instead.')
     } finally {
       setAnalyzing(false)
     }
@@ -72,7 +115,7 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
         body: JSON.stringify({
           profile,
           recentSessions: sessions.slice(0, 3),
-          studyTimePref: profile.study_time_pref || 10
+          studyTimePref: profile.study_daily_mins || 60
         })
       })
       const data = await res.json()
@@ -95,6 +138,7 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
     : '0.0'
 
   const improvePoints = [...new Set(sessions.flatMap(s => s.improve_points || []))].slice(0, 6)
+  const suggestedCourses = profile?.metadata?.suggestedCourses || []
 
   if (loading) return <div style={s.loading}>Loading Dashboard...</div>
 
@@ -161,6 +205,20 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
               )}
             </div>
 
+            {suggestedCourses.length > 0 && (
+              <div style={s.card}>
+                <h3 style={s.cardTitle}>🎓 Recommended Learning</h3>
+                <div style={s.courseList}>
+                  {suggestedCourses.map((c, i) => (
+                    <div key={i} style={s.courseItem}>
+                      <span style={s.courseIcon}>📚</span>
+                      <span style={s.courseText}>{c}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={s.card}>
               <h3 style={s.cardTitle}>Improvement Areas</h3>
               <div style={s.tagCloud}>
@@ -174,17 +232,28 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
           {/* Right: Resume & History */}
           <div style={s.rightCol}>
             <div style={s.card}>
-              <h3 style={s.cardTitle}>AI Resume Analysis</h3>
-              <p style={s.cardDesc}>Paste your resume to get tailored interview topics.</p>
-              <textarea 
-                style={s.textarea} 
-                placeholder="Paste resume text here..." 
-                value={resumeText}
-                onChange={e => setResumeText(e.target.value)}
-              />
-              <button style={s.analyzeBtn} onClick={handleAnalyzeResume} disabled={analyzing || !resumeText.trim()}>
-                {analyzing ? 'Analyzing...' : 'Analyze Resume'}
-              </button>
+              <h3 style={s.cardTitle}>Resume Analysis</h3>
+              <p style={s.cardDesc}>Upload PDF/DOCX to get tailored interview topics.</p>
+              <div style={s.uploadZone}>
+                <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} style={s.fileInput} id="resume-upload" />
+                <label htmlFor="resume-upload" style={s.uploadLabel}>
+                  {analyzing ? '⏳ Analyzing...' : '📁 Drop or Click to Upload'}
+                </label>
+              </div>
+            </div>
+
+            <div style={s.card}>
+              <h3 style={s.cardTitle}>Personalization</h3>
+              <div style={s.themeRow}>
+                <button style={{ ...s.themeBtn, background: theme === 'light' ? 'var(--primary-l)' : 'var(--surface-2)' }} onClick={() => updatePersonalization('light', bgColor)}>☀️ Light</button>
+                <button style={{ ...s.themeBtn, background: theme === 'dark' ? 'var(--primary-l)' : 'var(--surface-2)' }} onClick={() => updatePersonalization('dark', bgColor)}>🌙 Dark</button>
+                <button style={{ ...s.themeBtn, background: theme === 'oled' ? 'var(--primary-l)' : 'var(--surface-2)' }} onClick={() => updatePersonalization('oled', bgColor)}>📱 OLED</button>
+              </div>
+              <div style={s.colorRow}>
+                <span style={s.colorLabel}>Custom Background:</span>
+                <input type="color" value={bgColor || '#f8fafc'} onChange={e => updatePersonalization(theme, e.target.value)} style={s.colorPicker} />
+                {bgColor && <button style={s.resetBtn} onClick={() => updatePersonalization(theme, '')}>Reset</button>}
+              </div>
             </div>
 
             <div style={s.card}>
@@ -236,21 +305,29 @@ const s = {
   card: { background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' },
   cardTitle: { fontSize: 18, fontWeight: 700, marginBottom: '1rem' },
   cardDesc: { fontSize: 13, color: 'var(--muted)', marginBottom: '1rem' },
-  textarea: { width: '100%', height: 120, padding: '10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 14, marginBottom: '1rem', outline: 'none', background: 'var(--surface-2)' },
-  analyzeBtn: { width: '100%', padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, fontWeight: 600 },
-  roadmap: { background: 'var(--primary-l)', padding: '1rem', borderRadius: 8, border: '1px solid var(--primary)' },
-  roadmapFocus: { fontSize: 14, marginBottom: '1rem', color: 'var(--primary)' },
-  dayGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' },
-  dayCard: { background: '#fff', padding: '0.75rem', borderRadius: 6, border: '1px solid var(--border)' },
-  dayName: { fontWeight: 700, fontSize: 12, marginBottom: 6, color: 'var(--primary)' },
-  taskList: { listStyle: 'none', fontSize: 11, color: 'var(--text-2)' },
-  task: { marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 },
-  emptyRoadmap: { textAlign: 'center', padding: '2rem 0' },
-  genBtn: { marginTop: '1rem', background: 'var(--primary)', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8, fontWeight: 600 },
+  uploadZone: { border: '2px dashed var(--border)', borderRadius: 12, padding: '2rem', textAlign: 'center', cursor: 'pointer', background: 'var(--surface-2)', transition: 'all 0.2s' },
+  fileInput: { display: 'none' },
+  uploadLabel: { cursor: 'pointer', fontWeight: 600, color: 'var(--text-2)' },
+  themeRow: { display: 'flex', gap: 8, marginBottom: '1.5rem' },
+  themeBtn: { flex: 1, padding: '8px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, fontWeight: 600 },
+  colorRow: { display: 'flex', alignItems: 'center', gap: 12 },
+  colorLabel: { fontSize: 13, color: 'var(--muted)' },
+  colorPicker: { width: 40, height: 30, border: 'none', borderRadius: 4, padding: 0, cursor: 'pointer' },
+  resetBtn: { fontSize: 12, color: 'var(--primary)', background: 'none', border: 'none', fontWeight: 600 },
+  roadmap: { background: 'var(--primary-l)', padding: '1.5rem', borderRadius: 12, border: '1px solid var(--primary)' },
+  roadmapFocus: { fontSize: 15, marginBottom: '1.5rem', color: 'var(--primary)', fontWeight: 700 },
+  dayGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' },
+  dayCard: { background: 'var(--surface)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border)', boxShadow: 'var(--shadow)' },
+  dayName: { fontWeight: 800, fontSize: 13, marginBottom: 8, color: 'var(--primary)', textTransform: 'uppercase' },
+  taskList: { listStyle: 'none', fontSize: 12, color: 'var(--text-2)' },
+  task: { marginBottom: 6, display: 'flex', alignItems: 'flex-start', gap: 6 },
+  courseList: { display: 'flex', flexDirection: 'column', gap: 10 },
+  courseItem: { display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface-2)', padding: '10px 14px', borderRadius: 8 },
+  courseText: { fontSize: 14, fontWeight: 500 },
   tagCloud: { display: 'flex', flexWrap: 'wrap', gap: 8 },
   tag: { background: 'var(--secondary-l)', color: 'var(--secondary)', padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 },
   sessionList: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
-  sessionItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid var(--border)' },
+  sessionItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' },
   sessionInfo: { display: 'flex', flexDirection: 'column' },
   sessionDate: { fontSize: 12, color: 'var(--muted)' },
   sessionTopics: { fontSize: 13, fontWeight: 500 },

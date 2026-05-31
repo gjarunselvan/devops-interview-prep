@@ -1,4 +1,5 @@
 :root {
+  /* Default Light Theme */
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
   --primary-l: #eff6ff;
@@ -28,6 +29,32 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
+[data-theme='dark'] {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface-2: #334155;
+  --text: #f8fafc;
+  --text-2: #cbd5e1;
+  --muted: #94a3b8;
+  --border: #334155;
+  --border-2: #475569;
+  --primary-l: rgba(37, 99, 235, 0.15);
+  --secondary-l: rgba(124, 58, 237, 0.15);
+}
+
+[data-theme='oled'] {
+  --bg: #000000;
+  --surface: #121212;
+  --surface-2: #1e1e1e;
+  --text: #ffffff;
+  --text-2: #e2e8f0;
+  --muted: #a0aec0;
+  --border: #2d3748;
+  --border-2: #4a5568;
+  --primary-l: rgba(37, 99, 235, 0.2);
+  --secondary-l: rgba(124, 58, 237, 0.2);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -40,6 +67,7 @@ body {
   color: var(--text);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 button {
@@ -75,8 +103,8 @@ pre, code {
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
