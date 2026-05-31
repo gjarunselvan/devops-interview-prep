@@ -122,11 +122,14 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
             </div>
 
             <div style={s.card}>
-              <div style={s.cardTitle}>Improvements</div>
+              <div style={s.cardTitle}>Session History</div>
               <div style={s.improveList}>
                 {improveHistory.map((item, i) => (
                   <div key={i} style={s.improveItem} onClick={() => onViewReport(item.sessionData)}>
-                    <div><div style={s.improveText}>{item.text}</div><div style={s.improveDate}>{item.date}</div></div>
+                    <div style={{ flex: 1 }}>
+                      <div style={s.improveText}>{item.text}</div>
+                      <div style={s.improveDate}>{item.date}</div>
+                    </div>
                     <span>→</span>
                   </div>
                 ))}
