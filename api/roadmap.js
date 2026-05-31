@@ -20,7 +20,12 @@ Candidate Profile:
 Recent Performance/Weak Points:
 ${recentSessions?.map(s => `- Avg Score: ${s.avg_score}/10, Points to improve: ${s.improve_points?.join(', ')}`).join('\n') || 'No recent sessions.'}
 
-Create a structured study plan for 7 days. For every task, provide a "resourceLink" which is a direct search query or a likely official documentation URL.
+Create a structured study plan for 7 days. 
+For EVERY task, you MUST provide:
+1. "title": The name of the task.
+2. "duration": How long it should take.
+3. "resourceLink": A direct YouTube search query link (e.g., https://www.youtube.com/results?search_query=kubernetes+networking+tutorial).
+4. "completed": false (Default state).
 
 Respond in EXACTLY this JSON format:
 {
@@ -29,8 +34,8 @@ Respond in EXACTLY this JSON format:
     { 
       "day": "Monday", 
       "tasks": [
-        { "title": "Task 1", "duration": "30 mins", "resourceLink": "https://www.youtube.com/results?search_query=..." },
-        { "title": "Task 2", "duration": "15 mins", "resourceLink": "https://kubernetes.io/docs/..." }
+        { "title": "Task 1", "duration": "30 mins", "resourceLink": "...", "completed": false },
+        ...
       ]
     },
     ...
@@ -52,7 +57,7 @@ Respond in EXACTLY this JSON format:
         messages: [
           {
             role: 'system',
-            content: 'You are a DevOps mentor that outputs structured JSON with learning resources.'
+            content: 'You are a DevOps mentor that outputs structured JSON with YouTube learning resources.'
           },
           { role: 'user', content: prompt }
         ]

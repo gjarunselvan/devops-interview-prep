@@ -45,12 +45,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const data = await res.json()
       if (data.result) {
         const updatedMetadata = { ...(profile.metadata || {}), ...data.result }
-        await supabase.from('profiles').update({ 
-          resume_text: text, 
-          metadata: updatedMetadata 
-        }).eq('id', profile.id)
-        
-        // Instant global update without reload
+        await supabase.from('profiles').update({ resume_text: text, metadata: updatedMetadata }).eq('id', profile.id)
         onUpdateProfile({ ...profile, resume_text: text, metadata: updatedMetadata })
       }
     } catch (err) { alert(err.message) } finally { setAnalyzing(false) }
@@ -63,10 +58,18 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const data = await res.json()
       if (data.result) {
         const { error } = await supabase.from('roadmaps').insert({ user_id: profile.id, content: data.result })
-        if (error) throw new Error('Roadmaps table error.')
-        setRoadmap(data.result)
+        if (error) alert('Error: "roadmaps" table error.')
+        else setRoadmap(data.result)
       }
     } catch (err) { console.error(err) } finally { setGenerating(false) }
+  }
+
+  async function toggleTaskCompletion(dayIndex, taskIndex) {
+    if (!roadmap) return
+    const newRoadmap = JSON.parse(JSON.stringify(roadmap))
+    newRoadmap.days[dayIndex].tasks[taskIndex].completed = !newRoadmap.days[dayIndex].tasks[taskIndex].completed
+    setRoadmap(newRoadmap)
+    await supabase.from('roadmaps').update({ content: newRoadmap }).eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1)
   }
 
   function handleSurpriseMe() {
@@ -151,13 +154,18 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}><div style={s.cardTitle}>Roadmap</div><button style={s.ghostBtn} onClick={handleGenerateRoadmap}>REFRESH</button></div>
               {roadmap ? (
                 <div style={s.roadmapScroll}>
-                  {roadmap.days.map((d, i) => (
-                    <div key={i} style={s.roadmapDay}>
+                  {roadmap.days.map((d, di) => (
+                    <div key={di} style={s.roadmapDay}>
                       <div style={s.dayTitle}>{d.day}</div>
                       {d.tasks.map((t, ti) => (
-                        <div key={ti} style={s.taskItem}>
-                          <div style={s.taskName}>{t.title}</div>
-                          <div style={s.taskMeta}><span>{t.duration}</span> {t.resourceLink && <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.taskLink}>RESOURCE</a>}</div>
+                        <div key={ti} style={{ ...s.taskItem, opacity: t.completed ? 0.6 : 1, background: t.completed ? 'var(--bg)' : 'var(--surface2)' }}>
+                          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                            <input type="checkbox" checked={!!t.completed} onChange={() => toggleTaskCompletion(di, ti)} style={s.checkbox} />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ ...s.taskName, textDecoration: t.completed ? 'line-through' : 'none' }}>{t.title}</div>
+                              <div style={s.taskMeta}><span>{t.duration}</span> {t.resourceLink && <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.taskLink}>VIDEO →</a>}</div>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -227,12 +235,13 @@ const s = {
   surpriseBtn:  { flex: 1, padding: '10px 20px', background: 'linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)', color: '#fff', borderRadius: 12, fontSize: 13, fontWeight: 800, border: 'none', cursor: 'pointer' },
   reBtn:        { padding: '10px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: 'pointer' },
   roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem' },
-  roadmapDay:   { minWidth: 200, borderLeft: '2px solid var(--primary-l)', paddingLeft: 14 },
+  roadmapDay:   { minWidth: 200, borderLeft: '3px solid var(--primary-l)', paddingLeft: 14 },
   dayTitle:     { fontSize: 10, fontWeight: 900, color: 'var(--primary)', marginBottom: 10, textTransform: 'uppercase' },
-  taskItem:     { background: 'var(--surface2)', padding: '10px', borderRadius: 8, marginBottom: 8 },
+  taskItem:     { background: 'var(--surface2)', padding: '10px', borderRadius: 8, marginBottom: 8, transition: 'all 0.2s' },
   taskName:     { fontSize: 11, fontWeight: 800, color: 'var(--text2)' },
   taskMeta:     { display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 700, marginTop: 4 },
-  taskLink:     { color: 'var(--primary)', textDecoration: 'none' },
+  taskLink:     { color: 'var(--primary)', textDecoration: 'none', fontWeight: 900 },
+  checkbox:     { width: 14, height: 14, marginTop: 2, cursor: 'pointer' },
   profileBody:  { marginTop: 15 },
   profileSummary: { fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, fontStyle: 'italic', marginBottom: 15 },
   metaItem:     { marginBottom: 15 },
