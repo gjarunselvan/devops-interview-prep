@@ -4,8 +4,9 @@ import Auth from './components/Auth'
 import Setup from './components/Setup'
 import Interview from './components/Interview'
 import Report from './components/Report'
+import Dashboard from './components/Dashboard'
 
-const SCREENS = { AUTH: 'auth', SETUP: 'setup', INTERVIEW: 'interview', REPORT: 'report' }
+const SCREENS = { AUTH: 'auth', DASHBOARD: 'dashboard', SETUP: 'setup', INTERVIEW: 'interview', REPORT: 'report' }
 
 export default function App() {
   const [screen,    setScreen]    = useState(SCREENS.AUTH)
@@ -79,13 +80,13 @@ export default function App() {
         return
       }
     }
-    setScreen(SCREENS.SETUP)
+    setScreen(SCREENS.DASHBOARD)
   }
 
   async function handleAuth(authUser, profile) {
     setUser(authUser)
     setProfile(profile || { full_name: authUser.email, username: authUser.email })
-    setScreen(SCREENS.SETUP)
+    setScreen(SCREENS.DASHBOARD)
   }
 
   async function handleStart(cfg) {
@@ -114,7 +115,7 @@ export default function App() {
       : 0
     const allImprove = [...new Set(newHistory.flatMap(h => h.improvePoints || []))].filter(Boolean)
     await supabase.from('sessions').update({
-      history, improve_points: allImprove, avg_score: avgScore, completed,
+      history: newHistory, improve_points: allImprove, avg_score: avgScore, completed,
     }).eq('id', sessionId)
   }
 
@@ -135,14 +136,17 @@ export default function App() {
   return (
     <>
       {screen === SCREENS.AUTH      && <Auth onAuth={handleAuth} />}
-      {screen === SCREENS.SETUP     && <Setup profile={profile} onStart={handleStart} onLogout={handleLogout} />}
+      {screen === SCREENS.DASHBOARD && profile && (
+        <Dashboard profile={profile} onStartSession={() => setScreen(SCREENS.SETUP)} onLogout={handleLogout} />
+      )}
+      {screen === SCREENS.SETUP     && <Setup profile={profile} onStart={handleStart} onLogout={handleLogout} onGoBack={() => setScreen(SCREENS.DASHBOARD)} />}
       {screen === SCREENS.INTERVIEW && config && (
         <Interview config={config} profile={profile} onComplete={handleComplete} onSaveSession={handleSaveSession} />
       )}
       {screen === SCREENS.REPORT    && config && (
         <Report history={history} config={config} profile={profile}
           onRestart={() => setScreen(SCREENS.SETUP)}
-          onGoHome={() => setScreen(SCREENS.SETUP)}
+          onGoHome={() => setScreen(SCREENS.DASHBOARD)}
         />
       )}
     </>
