@@ -167,6 +167,12 @@ export default function App() {
     setScreen(SCREENS.REPORT)
   }
 
+  async function handlePersonalize(newTheme, newColor) {
+    setTheme(newTheme)
+    setBgColor(newColor)
+    await supabase.from('profiles').update({ theme: newTheme, bg_color: newColor }).eq('id', user.id)
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut()
     setUser(null); setProfile(null); setConfig(null); setHistory([]); setSessionId(null)
@@ -179,7 +185,13 @@ export default function App() {
     <>
       {screen === SCREENS.AUTH      && <Auth onAuth={handleAuth} />}
       {screen === SCREENS.DASHBOARD && profile && (
-        <Dashboard profile={profile} onStartSession={() => setScreen(SCREENS.SETUP)} onLogout={handleLogout} />
+        <Dashboard profile={profile} 
+          onStartSession={() => setScreen(SCREENS.SETUP)} 
+          onLogout={handleLogout}
+          theme={theme}
+          bgColor={bgColor}
+          onPersonalize={handlePersonalize}
+        />
       )}
       {screen === SCREENS.SETUP     && <Setup profile={profile} onStart={handleStart} onLogout={handleLogout} onGoBack={() => setScreen(SCREENS.DASHBOARD)} />}
       {screen === SCREENS.INTERVIEW && config && (

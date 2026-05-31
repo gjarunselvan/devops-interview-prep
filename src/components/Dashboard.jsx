@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
-import * as pdfjsLib from 'pdfjs-dist'
+import * as pdfjsLib from 'pdfjs-dist/build/pdf'
 import mammoth from 'mammoth'
 
-// Set worker for PDF.js
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+// Set worker for PDF.js - Use a more reliable way to find the worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString()
 
-export default function Dashboard({ profile, onStartSession, onLogout }) {
+export default function Dashboard({ profile, onStartSession, onLogout, theme, bgColor, onPersonalize }) {
   const [sessions, setSessions] = useState([])
   const [roadmap, setRoadmap] = useState(null)
   const [loading, setLoading] = useState(true)
   const [analyzing, setAnalyzing] = useState(false)
   const [generating, setGenerating] = useState(false)
-  const [theme, setTheme] = useState(profile?.theme || 'light')
-  const [bgColor, setBgColor] = useState(profile?.bg_color || '')
 
   useEffect(() => {
     loadDashboardData()
@@ -42,18 +43,6 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
     setLoading(false)
   }
 
-  async function updatePersonalization(newTheme, newColor) {
-    setTheme(newTheme)
-    setBgColor(newColor)
-    document.documentElement.setAttribute('data-theme', newTheme)
-    if (newColor) {
-      document.documentElement.style.setProperty('--bg', newColor)
-    } else {
-      document.documentElement.style.removeProperty('--bg')
-    }
-    await supabase.from('profiles').update({ theme: newTheme, bg_color: newColor }).eq('id', profile.id)
-  }
-
   async function handleFileUpload(e) {
     const file = e.target.files[0]
     if (!file) return
@@ -63,7 +52,8 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
       let text = ''
       if (file.type === 'application/pdf') {
         const arrayBuffer = await file.arrayBuffer()
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
+        const pdf = await loadingTask.promise
         let fullText = ''
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i)
@@ -80,6 +70,8 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
         setAnalyzing(false)
         return
       }
+
+      if (!text.trim()) throw new Error('Could not extract text from file.')
 
       const res = await fetch('/api/analyze-resume', {
         method: 'POST',
@@ -100,7 +92,7 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
       }
     } catch (err) {
       console.error('Parsing error:', err)
-      alert('Failed to parse file. Please try pasting the text instead.')
+      alert(`Failed to parse file: ${err.message}. Please try pasting the text instead.`)
     } finally {
       setAnalyzing(false)
     }
@@ -163,6 +155,7 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
         </div>
 
         <div style={s.grid}>
+          {/* Left: Progress & Roadmap */}
           <div style={s.leftCol}>
             <div style={s.statsRow}>
               <div style={s.statCard}>
@@ -244,6 +237,7 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
             </div>
           </div>
 
+          {/* Right: Resume & History */}
           <div style={s.rightCol}>
             <div style={s.card}>
               <h3 style={s.cardTitle}>Resume Analysis</h3>
@@ -259,14 +253,14 @@ export default function Dashboard({ profile, onStartSession, onLogout }) {
             <div style={s.card}>
               <h3 style={s.cardTitle}>Personalization</h3>
               <div style={s.themeRow}>
-                <button style={{ ...s.themeBtn, background: theme === 'light' ? 'var(--primary-l)' : 'var(--surface-2)' }} onClick={() => updatePersonalization('light', bgColor)}>☀️ Light</button>
-                <button style={{ ...s.themeBtn, background: theme === 'dark' ? 'var(--primary-l)' : 'var(--surface-2)' }} onClick={() => updatePersonalization('dark', bgColor)}>🌙 Dark</button>
-                <button style={{ ...s.themeBtn, background: theme === 'oled' ? 'var(--primary-l)' : 'var(--surface-2)' }} onClick={() => updatePersonalization('oled', bgColor)}>📱 OLED</button>
+                <button style={{ ...s.themeBtn, background: theme === 'light' ? 'var(--primary-l)' : 'var(--surface-2)' }} onClick={() => onPersonalize('light', bgColor)}>☀️ Light</button>
+                <button style={{ ...s.themeBtn, background: theme === 'dark' ? 'var(--primary-l)' : 'var(--surface-2)' }} onClick={() => onPersonalize('dark', bgColor)}>🌙 Dark</button>
+                <button style={{ ...s.themeBtn, background: theme === 'oled' ? 'var(--primary-l)' : 'var(--surface-2)' }} onClick={() => onPersonalize('oled', bgColor)}>📱 OLED</button>
               </div>
               <div style={s.colorRow}>
                 <span style={s.colorLabel}>Custom Background:</span>
-                <input type="color" value={bgColor || '#f8fafc'} onChange={e => updatePersonalization(theme, e.target.value)} style={s.colorPicker} />
-                {bgColor && <button style={s.resetBtn} onClick={() => updatePersonalization(theme, '')}>Reset</button>}
+                <input type="color" value={bgColor || '#f8fafc'} onChange={e => onPersonalize(theme, e.target.value)} style={s.colorPicker} />
+                {bgColor && <button style={s.resetBtn} onClick={() => onPersonalize(theme, '')}>Reset</button>}
               </div>
             </div>
 
@@ -297,7 +291,7 @@ const s = {
   page: { minHeight: '100vh', background: 'var(--bg)' },
   loading: { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' },
   container: { maxWidth: 1200, margin: '0 auto', padding: '0 1.5rem' },
-  nav: { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0.75rem 0', position: 'sticky', top: 0, zIndex: 10 },
+  nav: { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0.75rem 0', sticky: 'top', zIndex: 10 },
   navContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   logo: { background: 'var(--primary)', color: '#fff', padding: '8px 12px', borderRadius: 8, fontWeight: 800, fontSize: 18 },
   navActions: { display: 'flex', alignItems: 'center', gap: '1rem' },
