@@ -58,12 +58,18 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
   const [status,    setStatus]    = useState('') 
   const [intro,     setIntro]     = useState(true)
   const [inputMode, setInputMode] = useState((interviewType === 'coding' || interviewType === 'surprise') ? 'editor' : (mode || 'text'))
+  const [isMobile,  setIsMobile]  = useState(window.innerWidth < 768)
 
   const recognitionRef = useRef(null)
   const timerRef       = useRef(null)
   const historyRef     = useRef([])
 
-  useEffect(() => { historyRef.current = history }, [history])
+  useEffect(() => { 
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    historyRef.current = history 
+    return () => window.removeEventListener('resize', handleResize)
+  }, [history])
 
   useEffect(() => {
     if (sessionType === 'time') {
@@ -200,29 +206,28 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
     <div style={s.page}>
       <nav style={s.nav}>
         <div style={s.navLeft}>
-          <button style={s.backBtn} onClick={onGoHome}>← Abort</button>
+          <button style={s.backBtn} onClick={onGoHome}>← {isMobile ? '' : 'Abort'}</button>
           <div style={s.logo}>DI</div>
-          <span style={s.navTitle}>DevOps Interview</span>
+          {!isMobile && <span style={s.navTitle}>DevOps Interview</span>}
         </div>
         <div style={s.navRight}>
-          <button style={s.navLinkBtn} onClick={onGoHome}>🏠 Dashboard</button>
           <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
-          {sessionType === 'time' ? <div style={s.timer}>⏱ {fmtTime(timeLeft)}</div> : <div style={s.qCounter}>Q {qIndex + 1} / {totalQ}</div>}
-          <button style={s.endBtn} onClick={handleEndSession}>End Session</button>
+          {sessionType === 'time' ? <div style={s.timer}>⏱ {fmtTime(timeLeft)}</div> : <div style={s.qCounter}>Q {qIndex + 1}/{totalQ}</div>}
+          <button style={s.endBtn} onClick={handleEndSession}>{isMobile ? 'End' : 'End Session'}</button>
         </div>
       </nav>
 
       <div style={s.content}>
-        <div style={s.layout}>
+        <div style={{ ...s.layout, gridTemplateColumns: isMobile ? '1fr' : '1fr 280px' }}>
           <div style={s.main}>
             <div style={s.interviewerCard}>
               <div style={s.interviewerLeft}>
                 <div style={{ ...s.interviewerAvatar, ...(speaking ? s.avatarSpeaking : {}) }}>{INTERVIEWER_NAME[0]}</div>
                 <div>
                   <div style={s.interviewerName}>{INTERVIEWER_NAME}</div>
-                  <div style={s.interviewerRole}>AI Interviewer · Senior DevOps</div>
+                  <div style={s.interviewerRole}>{isMobile ? 'AI Interviewer' : 'AI Interviewer · Senior DevOps'}</div>
                 </div>
               </div>
             </div>
@@ -237,13 +242,13 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
             {!feedback && !intro && question && (
               <div style={s.answerCard}>
                 {inputMode === 'text' ? (
-                  <textarea style={s.textarea} placeholder="Type your response..." value={answer} onChange={e => setAnswer(e.target.value)} rows={6} />
+                  <textarea style={s.textarea} placeholder="Type your response..." value={answer} onChange={e => setAnswer(e.target.value)} rows={isMobile ? 4 : 6} />
                 ) : inputMode === 'editor' ? (
                   <div style={s.editorBox}>
                     <Editor
                       value={answer} onValueChange={c => setAnswer(c)}
                       highlight={c => highlight(c, languages.yaml)}
-                      padding={20} style={s.editor}
+                      padding={isMobile ? 10 : 20} style={s.editor}
                     />
                   </div>
                 ) : (
@@ -274,17 +279,19 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
             )}
           </div>
 
-          <div style={s.sidebar}>
-            <div style={s.sideCard}>
-              <div style={s.sideTitle}>Session Progress</div>
-              {history.map((h, i) => (
-                <div key={i} style={s.historyItem}>
-                  <span style={s.historyQ}>Q{i+1}</span>
-                  <span style={{ ...s.historyScore, color: scoreColor(h.score) }}>{h.score}/10</span>
-                </div>
-              ))}
+          {!isMobile && (
+            <div style={s.sidebar}>
+              <div style={s.sideCard}>
+                <div style={s.sideTitle}>Session Progress</div>
+                {history.map((h, i) => (
+                  <div key={i} style={s.historyItem}>
+                    <span style={s.historyQ}>Q{i+1}</span>
+                    <span style={{ ...s.historyScore, color: scoreColor(h.score) }}>{h.score}/10</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -293,46 +300,46 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
 
 const s = {
   page:             { minHeight: '100vh', background: 'var(--bg)' },
-  nav:              { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
+  nav:              { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 1rem', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
   navLeft:          { display: 'flex', alignItems: 'center', gap: 10 },
-  backBtn:          { padding: '5px 10px', background: 'none', border: '1.5px solid var(--border)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginRight: 10, cursor: 'pointer' },
+  backBtn:          { padding: '5px 10px', background: 'none', border: '1.5px solid var(--border)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'var(--muted)', cursor: 'pointer' },
   logo:             { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13 },
   navTitle:         { fontWeight: 700, fontSize: 15, color: 'var(--text)' },
-  navRight:         { display: 'flex', alignItems: 'center', gap: 12 },
-  navLinkBtn:       { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)' },
+  navRight:         { display: 'flex', alignItems: 'center', gap: 10 },
+  navLinkBtn:       { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)' },
   themeToggle:      { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
   timer:            { fontFamily: 'JetBrains Mono,monospace', fontSize: 14, fontWeight: 700, color: 'var(--text)' },
   qCounter:         { fontFamily: 'JetBrains Mono,monospace', fontSize: 13, color: 'var(--primary)', fontWeight: 600 },
-  endBtn:           { padding: '6px 14px', border: '1.5px solid var(--border)', borderRadius: 7, background: 'var(--surface)', color: 'var(--muted)', fontSize: 13, fontWeight: 500, cursor: 'pointer' },
-  content:          { maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem' },
-  layout:           { display: 'grid', gridTemplateColumns: '1fr 280px', gap: '1.5rem', alignItems: 'start' },
+  endBtn:           { padding: '6px 12px', border: '1.5px solid var(--border)', borderRadius: 7, background: 'var(--surface)', color: 'var(--muted)', fontSize: 13, fontWeight: 500, cursor: 'pointer' },
+  content:          { maxWidth: 1100, margin: '0 auto', padding: '1.5rem 1rem' },
+  layout:           { display: 'grid', gap: '1.5rem', alignItems: 'start' },
   main:             { display: 'flex', flexDirection: 'column', gap: '1.25rem' },
-  interviewerCard:  { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: 'var(--shadow)' },
+  interviewerCard:  { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: 'var(--shadow)' },
   interviewerLeft:  { display: 'flex', alignItems: 'center', gap: 14 },
-  interviewerAvatar:{ width: 46, height: 46, background: 'linear-gradient(135deg,#2563eb,#7c3aed)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 },
+  interviewerAvatar:{ width: 40, height: 40, background: 'linear-gradient(135deg,#2563eb,#7c3aed)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 16 },
   avatarSpeaking:   { boxShadow: '0 0 0 4px rgba(37,99,235,0.2)' },
   interviewerName:  { fontSize: 15, fontWeight: 700, color: 'var(--text)' },
-  interviewerRole:  { fontSize: 12, color: 'var(--muted)' },
+  interviewerRole:  { fontSize: 11, color: 'var(--muted)' },
   questionCard:     { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', boxShadow: 'var(--shadow)' },
-  questionLabel:    { fontSize: 12, fontWeight: 600, color: 'var(--primary)', marginBottom: 12, textTransform: 'uppercase' },
-  questionText:     { fontSize: 17, lineHeight: 1.7, color: 'var(--text)', fontWeight: 500 },
+  questionLabel:    { fontSize: 11, fontWeight: 600, color: 'var(--primary)', marginBottom: 12, textTransform: 'uppercase' },
+  questionText:     { fontSize: 16, lineHeight: 1.7, color: 'var(--text)', fontWeight: 500 },
   answerCard:       { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', boxShadow: 'var(--shadow)' },
-  textarea:         { width: '100%', padding: '14px', border: '1.5px solid var(--border)', borderRadius: 10, fontSize: 15, outline: 'none', background: 'var(--surface2)', color: 'var(--text)' },
-  editorBox:        { background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', minHeight: 200 },
+  textarea:         { width: '100%', padding: '12px', border: '1.5px solid var(--border)', borderRadius: 10, fontSize: 15, outline: 'none', background: 'var(--surface2)', color: 'var(--text)' },
+  editorBox:        { background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', minHeight: 180 },
   editor:           { fontFamily: '"JetBrains Mono", monospace', fontSize: 13 },
-  voiceBox:         { minHeight: 100, background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, color: 'var(--text)' },
-  micBtn:           { padding: '10px 20px', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600 },
-  submitBtn:        { width: '100%', marginTop: 14, padding: '13px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 9, fontSize: 15, fontWeight: 600 },
-  feedbackCard:     { background: 'var(--surface)', border: '1.5px solid #bbf7d0', borderRadius: 'var(--radius)', padding: '1.5rem', boxShadow: 'var(--shadow)' },
+  voiceBox:         { minHeight: 80, background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, color: 'var(--text)' },
+  micBtn:           { padding: '10px 15px', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600 },
+  submitBtn:        { width: '100%', marginTop: 12, padding: '12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 9, fontSize: 15, fontWeight: 600 },
+  feedbackCard:     { background: 'var(--surface)', border: '1.5px solid var(--green)', borderRadius: 'var(--radius)', padding: '1.5rem', boxShadow: 'var(--shadow)' },
   feedbackHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   feedbackTitle:    { fontSize: 15, fontWeight: 700, color: 'var(--text)' },
-  scoreBadge:       { padding: '5px 14px', borderRadius: 8, fontSize: 14, fontWeight: 700 },
-  feedbackText:     { fontSize: 14, lineHeight: 1.8, color: 'var(--text2)' },
+  scoreBadge:       { padding: '4px 10px', borderRadius: 8, fontSize: 13, fontWeight: 700 },
+  feedbackText:     { fontSize: 14, color: 'var(--text)' },
   nextBtn:          { width: '100%', padding: '12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 9, fontSize: 15, fontWeight: 600 },
   sidebar:          { display: 'flex', flexDirection: 'column', gap: '1.25rem' },
-  sideCard:         { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.25rem', boxShadow: 'var(--shadow)' },
-  sideTitle:        { fontSize: 13, fontWeight: 700, marginBottom: 14, textTransform: 'uppercase', color: 'var(--text)' },
-  historyItem:      { display: 'flex', justifyContent: 'space-between', padding: '8px 10px', background: 'var(--surface2)', borderRadius: 8, marginBottom: 8 },
-  historyQ:         { fontSize: 11, fontWeight: 700, color: 'var(--primary)' },
-  historyScore:     { fontSize: 13, fontWeight: 700, color: 'var(--text)' },
+  sideCard:         { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem', boxShadow: 'var(--shadow)' },
+  sideTitle:        { fontSize: 12, fontWeight: 700, marginBottom: 12, textTransform: 'uppercase', color: 'var(--text)' },
+  historyItem:      { display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: 'var(--surface2)', borderRadius: 6, marginBottom: 6 },
+  historyQ:         { fontSize: 10, fontWeight: 700, color: 'var(--primary)' },
+  historyScore:     { fontSize: 12, fontWeight: 700, color: 'var(--text)' },
 }

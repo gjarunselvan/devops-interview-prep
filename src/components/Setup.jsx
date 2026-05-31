@@ -74,8 +74,12 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
   const [studyTime,   setStudyTime]   = useState(profile?.study_daily_mins || 60)
   const [customYears, setCustomYears] = useState('')
   const [customQ,     setCustomQ]     = useState('')
+  const [isMobile,    setIsMobile]    = useState(window.innerWidth < 768)
 
   useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    
     const recommended = profile?.metadata?.recommendedTopics || []
     const initialTopics = []
     TOPIC_GROUPS.forEach(g => g.topics.forEach(t => { if (recommended.includes(t.id)) initialTopics.push(t) }))
@@ -85,6 +89,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
       const foundLevel = LEVELS.find(l => l.label === profile.metadata.experienceLevel || l.tag === profile.metadata.experienceLevel)
       if (foundLevel) setLevel(foundLevel)
     }
+    return () => window.removeEventListener('resize', handleResize)
   }, [profile])
 
   function toggleTopic(t) {
@@ -92,7 +97,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
     setTopics(prev => prev.find(x => x.id === t.id) ? prev.filter(x => x.id !== t.id) : [...prev, t])
   }
 
-  const topicList = topics.map(t => t.id === 'custom_entry' ? customTopic : t.label).filter(Boolean).join(', ')
+  const topicList = topics.map(t => t.id === 'custom_entry' ? t.label : t.label).filter(Boolean).join(', ')
   const canStart  = (level || customYears) && (type === 'behavioral' || type === 'surprise' || topics.length > 0)
 
   const finalLevel = customYears ? { tag: `${customYears}y Exp`, label: `${customYears} Years`, color: '#2563eb' } : level
@@ -118,16 +123,16 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
       <nav style={s.nav}>
         <div style={{ ...s.navBrand, cursor: 'pointer' }} onClick={onGoBack}>
           <div style={s.logo}>DI</div>
-          <span style={s.navTitle}>DevOps Initialization</span>
+          {!isMobile && <span style={s.navTitle}>DevOps Initialization</span>}
         </div>
         <div style={s.navRight}>
-          <button style={s.navLinkBtn} onClick={onGoBack}>🏠 Dashboard</button>
+          <button style={s.navLinkBtn} onClick={onGoBack}>🏠 {isMobile ? '' : 'Dashboard'}</button>
           <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
           <div style={s.avatar}>{profile?.full_name?.[0]}</div>
-          <span style={s.navName}>{profile?.full_name}</span>
-          <button style={s.logoutBtn} onClick={onLogout}>Sign out</button>
+          {!isMobile && <span style={s.navName}>{profile?.full_name}</span>}
+          <button style={s.logoutBtn} onClick={onLogout}>{isMobile ? 'Exit' : 'Sign out'}</button>
         </div>
       </nav>
 
@@ -137,12 +142,12 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
           <p style={s.heroSub}>Set your seniority, track, and stack to begin.</p>
         </div>
 
-        <div style={s.grid}>
+        <div style={{ ...s.grid, gridTemplateColumns: isMobile ? '1fr' : '1fr 440px' }}>
           <div style={s.configPanel}>
             {/* Seniority */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>01</span><div style={s.cardTitle}>Seniority Level</div></div>
-              <div style={s.levelGrid}>
+              <div style={{ ...s.levelGrid, gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)' }}>
                 {LEVELS.map(l => (
                   <button key={l.id}
                     style={{ ...s.levelBtn, borderColor: level?.id === l.id ? l.color : 'var(--border)', background: level?.id === l.id ? `${l.color}12` : 'var(--surface)', color: level?.id === l.id ? l.color : 'var(--muted)' }}
@@ -166,7 +171,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
             {/* Track */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>02</span><div style={s.cardTitle}>Interview Track</div></div>
-              <div style={s.typeStack}>
+              <div style={{ ...s.typeStack, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
                 {[
                   { id: 'technical', label: 'Technical Mastery', desc: 'Architecture & Tools' },
                   { id: 'coding',    label: 'Coding & IaC',      desc: 'Manifests & Scripting' },
@@ -191,7 +196,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
                   {TOPIC_GROUPS.map(g => (
                     <div key={g.name} style={s.group}>
                       <div style={s.groupName}>{g.name}</div>
-                      <div style={s.topicGrid}>
+                      <div style={{ ...s.topicGrid, gridTemplateColumns: isMobile ? 'repeat(auto-fill, minmax(90px, 1fr))' : 'repeat(auto-fill, minmax(110px, 1fr))' }}>
                         {g.topics.map(t => {
                           const sel = !!topics.find(x => x.id === t.id)
                           return (
@@ -220,9 +225,9 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
                         style={{ ...s.chipBtn, background: customTopic ? 'var(--primary)' : 'var(--surface)', color: customTopic ? '#fff' : 'var(--muted)' }}
                         onClick={() => {
                           if (!customTopic.trim()) return
-                          const customObj = { id: 'custom_entry', label: customTopic, icon: '✏️' }
-                          if (!topics.find(x => x.id === 'custom_entry')) setTopics([...topics, customObj])
-                          else setTopics(topics.map(x => x.id === 'custom_entry' ? customObj : x))
+                          const customObj = { id: Date.now().toString(), label: customTopic, icon: '✏️' }
+                          setTopics([...topics, customObj])
+                          setCustomTopic('')
                         }}>
                         Add
                       </button>
@@ -237,7 +242,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
             {/* Difficulty */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>04</span><div style={s.cardTitle}>Session Difficulty</div></div>
-              <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ display: 'flex', gap: 10 }}>
                 {DIFFICULTIES.map(d => (
                   <button key={d.id}
                     disabled={type === 'surprise'}
@@ -252,7 +257,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
             {/* Mode */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>05</span><div style={s.cardTitle}>Mode</div></div>
-              <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ display: 'flex', gap: 10 }}>
                 {[{ id: 'text',  icon: '⌨️', title: 'Interactive Text' }, { id: 'voice', icon: '🎙️', title: 'AI Voice' }].map(m => (
                   <button key={m.id}
                     style={{ ...s.modeBtn, flex: 1, borderColor: mode === m.id ? 'var(--primary)' : 'var(--border)', background: mode === m.id ? 'var(--primary-l)' : 'var(--surface)', color: mode === m.id ? 'var(--primary)' : 'var(--text2)' }}
@@ -270,7 +275,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                 {Q_OPTIONS.map(q => (
                   <button key={q}
-                    style={{ ...s.chipBtn, flex: 1, borderColor: (customQ ? '' : qTarget) === q ? 'var(--primary)' : 'var(--border)', background: (customQ ? '' : qTarget) === q ? 'var(--primary-l)' : 'var(--surface)', color: (customQ ? '' : qTarget) === q ? 'var(--primary)' : 'var(--muted)' }}
+                    style={{ ...s.chipBtn, flex: 1, borderColor: (customQ ? '' : qTarget) === q ? 'var(--primary)' : 'var(--border)', background: (customQ ? '' : qTarget) === q ? 'var(--primary-l)' : 'var(--surface)', color: (customQ ? '' : qTarget) === q ? 'var(--primary)' : 'var(--muted)', padding: '10px' }}
                     onClick={() => { setQTarget(q); setCustomQ(''); }}>
                     {q} Qs
                   </button>
@@ -293,35 +298,35 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
 
 const s = {
   page:         { minHeight: '100vh', background: 'var(--bg)', width: '100%' },
-  nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
+  nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 1rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
   navBrand:     { display: 'flex', alignItems: 'center', gap: 10 },
   logo:         { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
   navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
-  navRight:     { display: 'flex', alignItems: 'center', gap: 15 },
-  navLinkBtn:   { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6 },
+  navRight:     { display: 'flex', alignItems: 'center', gap: 10 },
+  navLinkBtn:   { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)' },
   themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
   avatar:       { width: 32, height: 32, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 12 },
   navName:      { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
   logoutBtn:    { padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', color: 'var(--red)', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
-  content:      { maxWidth: '100%', padding: '2rem 4rem', margin: '0 auto' },
-  hero:         { marginBottom: '3rem', textAlign: 'center' },
-  heroTitle:    { fontSize: 40, fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.03em' },
-  heroSub:      { fontSize: 18, color: 'var(--muted)', marginTop: 8, fontWeight: 500 },
-  grid:         { display: 'grid', gridTemplateColumns: '1fr 440px', gap: '3rem' },
-  card:         { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '2rem', marginBottom: '2rem', boxShadow: 'var(--shadow-md)' },
-  cardHeader:   { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 },
+  content:      { padding: '2rem 1rem', maxWidth: 1600, margin: '0 auto' },
+  hero:         { marginBottom: '2.5rem', textAlign: 'center' },
+  heroTitle:    { fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.03em' },
+  heroSub:      { fontSize: 'clamp(14px, 2vw, 18px)', color: 'var(--muted)', marginTop: 8, fontWeight: 500 },
+  grid:         { display: 'grid', gap: '2rem' },
+  card:         { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: 'var(--shadow-md)' },
+  cardHeader:   { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 },
   step:         { width: 32, height: 32, background: 'var(--primary-l)', color: 'var(--primary)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, fontFamily: 'JetBrains Mono,monospace' },
-  cardTitle:    { fontSize: 18, fontWeight: 850, color: 'var(--text)' },
-  levelGrid:    { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 },
-  levelBtn:     { padding: '16px 10px', borderRadius: 12, border: '2px solid', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s', background: 'var(--surface)' },
-  typeStack:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
-  trackBtn:     { padding: '16px', borderRadius: 14, border: '2px solid', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', background: 'var(--surface)' },
-  groupsContainer: { display: 'flex', flexDirection: 'column', gap: 32 },
-  groupName:    { fontSize: 12, fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 },
-  topicGrid:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12 },
-  topicBtn:     { padding: '16px 10px', borderRadius: 14, border: '2px solid', cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'all 0.2s', background: 'var(--surface)' },
-  modeBtn:      { padding: '24px 12px', borderRadius: 16, border: '2px solid', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s', background: 'var(--surface)' },
-  chipBtn:      { padding: '12px 18px', borderRadius: 12, border: '2px solid', cursor: 'pointer', fontSize: 14, fontWeight: 800, transition: 'all 0.2s', background: 'var(--surface)' },
-  startBtn:     { width: '100%', padding: '22px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 16, fontSize: 18, fontWeight: 950, cursor: 'pointer', boxShadow: '0 12px 24px var(--primary-glow)' },
-  input:        { width: '100%', padding: '14px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--surface2)', fontSize: 14, fontWeight: 600, outline: 'none', color: 'var(--text)' }
+  cardTitle:    { fontSize: 16, fontWeight: 850, color: 'var(--text)' },
+  levelGrid:    { display: 'grid', gap: 10 },
+  levelBtn:     { padding: '12px 8px', borderRadius: 12, border: '2px solid', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s', background: 'var(--surface)' },
+  typeStack:    { display: 'grid', gap: 10 },
+  trackBtn:     { padding: '12px 16px', borderRadius: 14, border: '2px solid', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', background: 'var(--surface)' },
+  groupsContainer: { display: 'flex', flexDirection: 'column', gap: 24 },
+  groupName:    { fontSize: 11, fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 },
+  topicGrid:    { display: 'grid', gap: 10 },
+  topicBtn:     { padding: '12px 8px', borderRadius: 14, border: '2px solid', cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'all 0.2s', background: 'var(--surface)' },
+  modeBtn:      { padding: '20px 10px', borderRadius: 16, border: '2px solid', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s', background: 'var(--surface)' },
+  chipBtn:      { padding: '10px 15px', borderRadius: 12, border: '2px solid', cursor: 'pointer', fontSize: 13, fontWeight: 800, transition: 'all 0.2s', background: 'var(--surface)' },
+  startBtn:     { width: '100%', padding: '18px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 16, fontSize: 16, fontWeight: 950, cursor: 'pointer', boxShadow: '0 10px 20px var(--primary-glow)' },
+  input:        { width: '100%', padding: '12px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--surface2)', fontSize: 14, fontWeight: 600, outline: 'none', color: 'var(--text)' }
 }

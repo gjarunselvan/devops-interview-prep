@@ -11,6 +11,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
   const [loading, setLoading] = useState(true)
   const [analyzing, setAnalyzing] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
   const SKILL_ICONS = {
     'AWS': '☁️', 'Kubernetes': '☸️', 'Terraform': '🏗️', 'Ansible': '⚙️', 'Linux': '🐧',
@@ -19,7 +20,10 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
   };
 
   useEffect(() => { 
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
     if (profile?.id) loadDashboardData() 
+    return () => window.removeEventListener('resize', handleResize)
   }, [profile?.id])
 
   async function loadDashboardData() {
@@ -64,8 +68,8 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const data = await res.json()
       if (data.result) {
         const { error } = await supabase.from('roadmaps').insert({ user_id: profile.id, content: data.result })
-        if (error) throw new Error('Roadmaps table error.')
-        setRoadmap(data.result)
+        if (error) alert('Error: "roadmaps" table error.')
+        else setRoadmap(data.result)
       }
     } catch (err) { console.error(err) } finally { setGenerating(false) }
   }
@@ -78,21 +82,6 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
     await supabase.from('roadmaps').update({ content: newRoadmap }).eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1)
   }
 
-  function handleSurpriseMe() {
-    const mixedConfig = {
-      level: { tag: profile.experience_level || 'Mid-Level', label: profile.experience_level || 'Mid-Level' },
-      topics: [], 
-      topicList: 'Full DevOps Stack (Mixed Domains)',
-      mode: 'text',
-      sessionType: 'questions',
-      totalQ: 10,
-      studyTime: profile.study_daily_mins || 60,
-      interviewType: 'mixed',
-      difficulty: 'hard'
-    }
-    onStartSession(mixedConfig)
-  }
-
   const avgScore = sessions.length > 0 ? (sessions.reduce((acc, s) => acc + (s.avg_score || 0), 0) / sessions.length).toFixed(1) : '0.0'
   const improveHistory = sessions.flatMap(s => (s.improve_points || []).map(p => ({ text: p, date: new Date(s.created_at).toLocaleDateString(), sessionData: s }))).slice(0, 10)
   const meta = profile?.metadata || {}
@@ -102,15 +91,15 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
   return (
     <div style={s.page}>
       <nav style={s.nav}>
-        <div style={s.navBrand}><div style={s.logo}>DI</div><span style={s.navTitle}>DevOps Command Center</span></div>
+        <div style={s.navBrand}><div style={s.logo}>DI</div>{!isMobile && <span style={s.navTitle}>Command Center</span>}</div>
         <div style={s.navRight}>
-          <button style={s.navLinkBtn} onClick={() => window.location.reload()}>🏠 Dashboard</button>
+          <button style={s.navLinkBtn} onClick={() => window.location.reload()}>🏠 {isMobile ? '' : 'Dashboard'}</button>
           <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
           <div style={s.avatar}>{profile?.full_name?.[0]}</div>
-          <span style={s.navName}>{profile?.full_name}</span>
-          <button style={s.logoutBtn} onClick={onLogout}>Sign out</button>
+          {!isMobile && <span style={s.navName}>{profile?.full_name}</span>}
+          <button style={s.logoutBtn} onClick={onLogout}>{isMobile ? 'Exit' : 'Sign out'}</button>
         </div>
       </nav>
 
@@ -120,7 +109,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
           <p style={s.heroSub}>Your technical growth and career roadmap in one view.</p>
         </div>
 
-        <div style={s.grid}>
+        <div style={{ ...s.grid, gridTemplateColumns: isMobile ? '1fr' : '360px 1fr' }}>
           <div style={s.left}>
             <div style={s.card}>
               <div style={s.cardTitle}>Performance</div>
@@ -139,7 +128,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
             <div style={s.card}>
               <div style={s.cardTitle}>Session History</div>
               <div style={s.improveList}>
-                {improveHistory.map((item, i) => (
+                {improveHistory.length > 0 ? improveHistory.map((item, i) => (
                   <div key={i} style={s.improveItem} onClick={() => onViewReport(item.sessionData)}>
                     <div style={{ flex: 1 }}>
                       <div style={s.improveText}>{item.text}</div>
@@ -147,19 +136,19 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
                     </div>
                     <span>→</span>
                   </div>
-                ))}
+                )) : <p style={s.empty}>No session history yet.</p>}
               </div>
             </div>
           </div>
 
           <div style={s.right}>
-            <div style={{ display: 'flex', gap: 15, marginBottom: 20 }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexDirection: isMobile ? 'column' : 'row' }}>
               <button style={{ ...s.startBtn, flex: 2, margin: 0 }} onClick={() => onStartSession()}>🚀 Start Interview</button>
-              <button style={s.reBtn} onClick={() => document.getElementById('res-up').click()}>{analyzing ? '⏳' : '🔄'} Update Resume</button>
+              <button style={{ ...s.reBtn, width: isMobile ? '100%' : 'auto' }} onClick={() => document.getElementById('res-up').click()}>{analyzing ? '⏳' : '🔄'} Update Resume</button>
             </div>
 
             <div style={s.card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}><div style={s.cardTitle}>Roadmap</div><button style={s.ghostBtn} onClick={handleGenerateRoadmap}>REFRESH</button></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}><div style={s.cardTitle}>Roadmap</div><button style={s.ghostBtn} onClick={handleGenerateRoadmap}>{generating ? '...' : 'REFRESH'}</button></div>
               {roadmap ? (
                 <div style={s.roadmapScroll}>
                   {roadmap.days.map((d, di) => (
@@ -225,39 +214,39 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
 const s = {
   page:         { minHeight: '100vh', background: 'var(--bg)', width: '100%' },
-  nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
+  nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 1rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
   navBrand:     { display: 'flex', alignItems: 'center', gap: 10 },
   logo:         { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
   navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
-  navRight:     { display: 'flex', alignItems: 'center', gap: 15 },
-  navLinkBtn:   { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)' },
+  navRight:     { display: 'flex', alignItems: 'center', gap: 10 },
+  navLinkBtn:   { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: 'var(--text2)' },
   themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
   avatar:       { width: 32, height: 32, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 12 },
   navName:      { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
   logoutBtn:    { padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', color: 'var(--red)', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
-  content:      { padding: '2rem 4rem', maxWidth: 1600, margin: '0 auto' },
+  content:      { padding: '2rem 1rem', maxWidth: 1600, margin: '0 auto' },
   hero:         { marginBottom: '2.5rem' },
-  heroTitle:    { fontSize: 32, fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.02em' },
-  heroSub:      { fontSize: 15, color: 'var(--muted)', marginTop: 5, fontWeight: 500 },
-  grid:         { display: 'grid', gridTemplateColumns: '360px 1fr', gap: '2rem' },
+  heroTitle:    { fontSize: 'clamp(24px, 5vw, 32px)', fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.02em' },
+  heroSub:      { fontSize: 14, color: 'var(--muted)', marginTop: 5, fontWeight: 500 },
+  grid:         { display: 'grid', gap: '1.5rem' },
   left:         { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
   right:        { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
   card:         { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', boxShadow: 'var(--shadow)' },
   cardTitle:    { fontSize: 10, fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' },
   statsRow:     { display: 'flex', marginTop: 15, textAlign: 'center' },
   statBox:      { flex: 1 },
-  statVal:      { fontSize: 32, fontWeight: 950, color: 'var(--text)', fontFamily: 'JetBrains Mono,monospace' },
+  statVal:      { fontSize: 28, fontWeight: 950, color: 'var(--text)', fontFamily: 'JetBrains Mono,monospace' },
   statLabel:    { fontSize: 9, fontWeight: 800, color: 'var(--muted)' },
   xpBar:        { height: 6, background: 'rgba(255,255,255,0.15)', borderRadius: 3, marginTop: 15, overflow: 'hidden' },
-  xpFill:       { height: '100%', background: 'var(--surface)' },
+  xpFill:       { height: '100%', background: 'var(--primary)' },
   improveList:  { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 15 },
   improveItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, cursor: 'pointer' },
   improveText:  { fontSize: 12, fontWeight: 700, color: 'var(--text2)' },
   improveDate:  { fontSize: 9, color: 'var(--muted)', marginTop: 3 },
-  startBtn:     { padding: '20px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 16, fontWeight: 950, boxShadow: '0 8px 20px var(--primary-glow)', cursor: 'pointer' },
+  startBtn:     { padding: '16px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 15, fontWeight: 950, boxShadow: '0 8px 20px var(--primary-glow)', cursor: 'pointer' },
   reBtn:        { padding: '10px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)' },
-  roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem' },
-  roadmapDay:   { minWidth: 200, borderLeft: '2px solid var(--primary-l)', paddingLeft: 14 },
+  roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '1rem' },
+  roadmapDay:   { minWidth: 220, borderLeft: '2px solid var(--primary-l)', paddingLeft: 14 },
   dayTitle:     { fontSize: 10, fontWeight: 900, color: 'var(--primary)', marginBottom: 10, textTransform: 'uppercase' },
   taskItem:     { background: 'var(--surface2)', padding: '10px', borderRadius: 8, marginBottom: 8, transition: 'all 0.2s' },
   taskName:     { fontSize: 11, fontWeight: 800, color: 'var(--text2)' },
@@ -266,13 +255,12 @@ const s = {
   checkbox:     { width: 14, height: 14, marginTop: 2, cursor: 'pointer' },
   proBadge:     { padding: '4px 12px', background: 'var(--primary-l)', color: 'var(--primary)', borderRadius: 20, fontSize: 10, fontWeight: 900, letterSpacing: '0.05em' },
   proProfile:   { marginTop: 10 },
-  summaryBox:   { background: 'var(--surface2)', padding: '20px', borderRadius: 12, position: 'relative', borderLeft: '4px solid var(--primary)' },
+  summaryBox:   { background: 'var(--surface2)', padding: '1.25rem', borderRadius: 12, position: 'relative', borderLeft: '4px solid var(--primary)' },
   quoteMark:    { position: 'absolute', top: 10, left: 10, fontSize: 40, color: 'var(--primary)', opacity: 0.1, fontFamily: 'serif' },
   proSummary:   { fontSize: 13, color: 'var(--text2)', lineHeight: 1.7, fontStyle: 'italic', position: 'relative', zIndex: 1 },
   smallLabel:   { fontSize: 9, fontWeight: 900, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 12 },
   skillCloud:   { display: 'flex', flexWrap: 'wrap', gap: 8 },
   proSkill:     { background: 'var(--surface)', border: '1px solid var(--border)', padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, boxShadow: 'var(--shadow)' },
-  skillDot:     { width: 5, height: 5, borderRadius: '50%', background: 'var(--primary)' },
   dropzone:     { border: '1.5px dashed var(--border2)', borderRadius: 12, padding: '2rem', textAlign: 'center', background: 'var(--surface2)', cursor: 'pointer' },
   loading:      { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'var(--muted)', background: 'var(--bg)' },
   ghostBtn:     { background: 'none', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 6, fontSize: 9, fontWeight: 800, color: 'var(--muted)', cursor: 'pointer' },
