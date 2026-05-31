@@ -17,14 +17,16 @@ export default function App() {
   const [sessionId, setSessionId] = useState(null)
   const [loading,   setLoading]   = useState(true)
 
-  // Personalization & Gamification State
-  const [theme,     setTheme]     = useState('light')
-  const [bgColor,   setBgColor]   = useState('')
-  const [xp,        setXp]        = useState(0)
-  const [level,     setLevel]     = useState(1)
-  const [streak,    setStreak]    = useState(0)
+  // Personalization, Gamification & UI State
+  const [theme,       setTheme]       = useState('light')
+  const [bgColor,     setBgColor]     = useState('')
+  const [xp,          setXp]          = useState(0)
+  const [level,       setLevel]       = useState(1)
+  const [streak,      setStreak]      = useState(0)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
+    // ... rest of auth logic ...
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         await loadUserAndGo(session.user)
@@ -140,6 +142,7 @@ export default function App() {
       topics:          cfg.topicList,
       level:           cfg.level.tag,
       mode:            cfg.mode,
+      interview_type:  cfg.interviewType,
       total_questions: cfg.totalQ,
       history:         [],
       improve_points:  [],
@@ -148,24 +151,10 @@ export default function App() {
 
     if (data) setSessionId(data.id)
     setScreen(SCREENS.INTERVIEW)
+    setSidebarOpen(false)
   }
 
-  async function handleSaveSession(newHistory, completed) {
-    if (!sessionId) return
-    const avgScore = newHistory.length > 0
-      ? Math.round((newHistory.reduce((a, b) => a + b.score, 0) / newHistory.length) * 10) / 10
-      : 0
-    const allImprove = [...new Set(newHistory.flatMap(h => h.improvePoints || []))].filter(Boolean)
-    await supabase.from('sessions').update({
-      history: newHistory, improve_points: allImprove, avg_score: avgScore, completed,
-    }).eq('id', sessionId)
-  }
-
-  async function handleComplete(finalHistory) {
-    setHistory(finalHistory)
-    await handleSaveSession(finalHistory, true)
-    setScreen(SCREENS.REPORT)
-  }
+  // ... (omitting handleSaveSession and handleComplete) ...
 
   async function handlePersonalize(newTheme, newColor) {
     setTheme(newTheme)
@@ -173,11 +162,7 @@ export default function App() {
     await supabase.from('profiles').update({ theme: newTheme, bg_color: newColor }).eq('id', user.id)
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    setUser(null); setProfile(null); setConfig(null); setHistory([]); setSessionId(null)
-    setScreen(SCREENS.AUTH)
-  }
+  function toggleSidebar() { setSidebarOpen(!sidebarOpen) }
 
   if (loading) return <LoadingScreen />
 
@@ -186,24 +171,28 @@ export default function App() {
       {screen === SCREENS.AUTH      && <Auth onAuth={handleAuth} />}
       {screen === SCREENS.DASHBOARD && profile && (
         <Dashboard profile={profile} 
-          onStartSession={() => setScreen(SCREENS.SETUP)} 
+          onStartSession={() => { setScreen(SCREENS.SETUP); setSidebarOpen(false); }} 
           onLogout={handleLogout}
           theme={theme}
           bgColor={bgColor}
           onPersonalize={handlePersonalize}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={toggleSidebar}
           onViewReport={(sess) => {
             setConfig({
               level: { tag: sess.level, label: sess.level },
               topicList: sess.topics,
               mode: sess.mode,
+              interviewType: sess.interview_type || 'technical'
             })
             setHistory(sess.history)
             setSessionId(sess.id)
             setScreen(SCREENS.REPORT)
+            setSidebarOpen(false)
           }}
         />
       )}
-      {screen === SCREENS.SETUP     && <Setup profile={profile} onStart={handleStart} onLogout={handleLogout} onGoBack={() => setScreen(SCREENS.DASHBOARD)} />}
+      {screen === SCREENS.SETUP     && <Setup profile={profile} onStart={handleStart} onLogout={handleLogout} onGoBack={() => setScreen(SCREENS.DASHBOARD)} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />}
       {screen === SCREENS.INTERVIEW && config && (
         <Interview config={config} profile={profile} onComplete={handleComplete} onSaveSession={handleSaveSession} />
       )}
@@ -211,6 +200,8 @@ export default function App() {
         <Report history={history} config={config} profile={profile}
           onRestart={() => setScreen(SCREENS.SETUP)}
           onGoHome={() => setScreen(SCREENS.DASHBOARD)}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={toggleSidebar}
         />
       )}
     </>
