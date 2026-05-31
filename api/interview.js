@@ -14,31 +14,33 @@ export default async function handler(req, res) {
   let userPrompt = ''
 
   if (type === 'question') {
-    systemPrompt = `You are Alex, a Senior DevOps Architect and Interviewer. You are conducting a high-stakes technical interview.
+    systemPrompt = `You are Alex, a Senior DevOps Architect and Interviewer. You are conducting a high-stakes ${interviewType} interview.
     
-    Candidate Seniority: ${level.tag || level.label}
+    Candidate Seniority: ${level?.tag || level?.label || 'Senior'}
     Target Track: ${interviewType}
-    Difficulty: ${difficulty}
+    Difficulty: ${difficulty || 'medium'}
     Primary Topics: ${topics || 'Full DevOps Lifecycle'}
 
-    INTERVIEW TRACK RULES:
-    - technical: Focus on internal mechanics, trade-offs, and deep tool logic (AWS, K8s, Terraform, etc).
-    - coding: Ask the candidate to write manifests (K8s YAML, TF), Dockerfiles, or Python/Bash scripts. Provide a complex scenario or skeleton.
-    - behavioral: Focus on Incident Management, Blameless Culture, STAR method, and SRE principles.
-    - surprise: Pull from ANY domain (Technical, Coding, OR Leadership) unexpectedly. Be unpredictable and difficult.
-    - mixed: A balanced blend of all tracks.
+    STRICT TRACK RULES (YOU MUST FOLLOW THESE):
+    - 'technical' (Mastery): DO NOT ASK FOR CODE OR MANIFESTS. Focus on architecture, internal tool mechanics, trade-offs, and high-level design. 
+      Ask "How would you design...?" or "What is the underlying mechanic of...?" or "Compare approach A vs B."
+    - 'coding' (Implementation): ALWAYS ASK FOR CODE. Focus on K8s YAML, Terraform, Dockerfiles, Python, or Bash. Provide a scenario and ask for the code solution.
+    - 'behavioral' (Leadership): NO TECHNICAL QUESTIONS. Focus on soft skills, SRE culture, incident management, conflict resolution, and the STAR method.
+    - 'surprise' (Extreme): Randomly pick between Technical, Coding, or Behavioral. Be unpredictable.
+    - 'mixed': A natural rotation of the above tracks.
 
     DIFFICULTY CALIBRATION:
-    - easy: Fundamentals, basic CLI, core concepts.
-    - medium: Multi-service architecture, performance optimization, standard troubleshooting.
-    - hard: Petabyte-scale challenges, security hardening, high-availability tradeoffs, and deep internal code logic.
+    - easy: Core concepts, basic definitions.
+    - medium: Real-world scenarios, troubleshooting, optimization.
+    - hard: Petabyte-scale, high-availability tradeoffs, deep internal logic, complex security hardening.
 
     Do not repeat these previous questions: ${history}.
     Keep the tone professional yet immersive.`
 
-    userPrompt = `Generate the next technical scenario. If track is 'coding' or 'surprise', prioritize code-based challenges.`
+    userPrompt = `Generate the next interview scenario for the '${interviewType}' track. Remember: if track is 'technical', do NOT ask for code manifests.`
   } else {
-    systemPrompt = `You are a Technical Evaluator. Rigorously evaluate the candidate's answer for a ${level.label} role (${difficulty} difficulty).
+    systemPrompt = `You are a Technical Evaluator. Rigorously evaluate the candidate's answer for a ${level?.label || 'Senior'} role (${difficulty || 'medium'} difficulty).
+    Track: ${interviewType}
     Question: ${question}
     Answer: ${answer}
 
@@ -48,7 +50,7 @@ export default async function handler(req, res) {
     - What was missed (be specific)
     - 📈 POINTS TO IMPROVE: (List as bullet points starting with '-')`
     
-    userPrompt = `Perform a deep technical evaluation.`
+    userPrompt = `Perform a deep technical evaluation of the answer.`
   }
 
   try {

@@ -50,19 +50,19 @@ export default function Auth({ onAuth }) {
 
   return (
     <div style={s.page}>
-      {/* PROFESSIONAL NAVBAR (Interview Style) */}
+      {/* PROFESSIONAL NAVBAR (Synchronized) */}
       <nav style={s.nav}>
         <div style={s.navLeft}>
           <div style={s.logo}>DI</div>
-          <span style={s.navTitle}>{isMobile ? 'Platform' : 'DevOps Career Platform'}</span>
+          <span style={s.navTitle}>DevOps Identity</span>
         </div>
         {!isMobile && <div style={s.navRight}><span style={s.badge}>SYSTEM SECURE</span></div>}
       </nav>
 
       <div style={s.container}>
         <div style={s.hero}>
-          <h1 style={s.heroTitle}>Initialize <span style={{ color: 'var(--primary)' }}>Identity</span></h1>
-          <p style={s.heroSub}>Access your high-density DevOps career simulation and performance dashboard.</p>
+          <h1 style={s.heroTitle}>Initialize <span style={{ color: 'var(--primary)' }}>Access</span></h1>
+          <p style={s.heroSub}>High-density simulation platform for DevOps Architects and Engineers.</p>
         </div>
 
         <div style={{ ...s.authCard, maxWidth: isMobile ? '100%' : '500px' }}>
@@ -81,20 +81,20 @@ export default function Auth({ onAuth }) {
             {tab === 'login' ? (
               <form onSubmit={handleLogin}>
                 <div style={s.field}><label style={s.label}>Work Email</label><input style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="engineer@domain.com" /></div>
-                <div style={s.field}><label style={s.label}>Terminal Password</label><input style={s.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" /></div>
-                <button style={s.submitBtn} disabled={loading}>{loading ? 'SYNCING...' : 'INITIATE TERMINAL →'}</button>
+                <div style={s.field}><label style={s.label}>Password</label><input style={s.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" /></div>
+                <button style={s.submitBtn} disabled={loading}>{loading ? 'SYNCING...' : 'INITIALIZE TERMINAL →'}</button>
               </form>
             ) : (
               <form onSubmit={handleRegister}>
                 <div style={s.field}><label style={s.label}>Full Name</label><input style={s.input} value={fullName} onChange={e => setFullName(e.target.value)} required placeholder="Arun Selvan" /></div>
-                <div style={s.field}><label style={s.label}>Identity Handle</label><input style={s.input} value={username} onChange={e => setUsername(e.target.value)} required placeholder="arun_sre" /></div>
+                <div style={s.field}><label style={s.label}>Handle</label><input style={s.input} value={username} onChange={e => setUsername(e.target.value)} required placeholder="arun_devops" /></div>
                 <div style={s.field}><label style={s.label}>Work Email</label><input style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="engineer@domain.com" /></div>
                 <div style={s.field}><label style={s.label}>Security Key</label><input style={s.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Min. 6 characters" /></div>
                 <button style={s.submitBtn} disabled={loading}>{loading ? 'PROVISIONING...' : 'CREATE IDENTITY →'}</button>
               </form>
             )}
           </div>
-          <p style={s.footerText}>Secure Session · Professional DevOps Assessment</p>
+          <p style={s.footerText}>Secure Terminal Session · Professional Assessment</p>
         </div>
       </div>
     </div>

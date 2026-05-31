@@ -16,7 +16,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
   const SKILL_ICONS = {
     'AWS': '☁️', 'Kubernetes': '☸️', 'Terraform': '🏗️', 'Ansible': '⚙️', 'Linux': '🐧',
     'CI/CD': '🔄', 'Jenkins': '🏺', 'Prometheus': '🔥', 'Grafana': '📊', 'Splunk': '📋',
-    'ELK Stack': '🪵', 'DevSecOps': '🔐', 'Docker': '🐳', 'GCP': '🔵', 'Azure': '🟦'
+    'ELK Stack': '🪵', 'DevSecOps': '🔐', 'Docker': '🐳', 'GCP': '🔵', 'Azure': '🟦', 'Git': '🌿'
   };
 
   useEffect(() => { 
@@ -83,33 +83,35 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
   const improveHistory = sessions.flatMap(s => (s.improve_points || []).map(p => ({ text: p, date: new Date(s.created_at).toLocaleDateString(), sessionData: s }))).slice(0, 10)
   const meta = profile?.metadata || {}
 
-  if (loading) return <div style={s.loading}>Initializing Dashboard...</div>
+  if (loading) return <div style={s.loading}>Initializing Command Center...</div>
 
   return (
     <div style={s.page}>
-      {/* MOBILE OPTIMIZED NAV */}
       <nav style={s.nav}>
-        <div style={s.navBrand}><div style={s.logo}>DI</div>{!isMobile && <span style={s.navTitle}>DevOps Platform</span>}</div>
+        <div style={s.navLeft}>
+          <div style={s.logo}>DI</div>
+          <span style={s.navTitle}>{isMobile ? 'Platform' : 'DevOps Control Center'}</span>
+        </div>
         <div style={s.navRight}>
           <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
           <div style={s.avatar}>{profile?.full_name?.[0]}</div>
-          <button style={s.logoutBtn} onClick={onLogout}>{isMobile ? 'EXIT' : 'SIGN OUT'}</button>
+          <button style={s.logoutBtn} onClick={onLogout}>{isMobile ? 'EXIT' : 'LOGOUT'}</button>
         </div>
       </nav>
 
       <div style={s.container}>
         <div style={s.hero}>
-          <h2 style={s.heroTitle}>Mission: <span style={{ color: 'var(--primary)' }}>{profile?.full_name?.split(' ')[0]}</span></h2>
-          <p style={s.heroSub}>Your technical growth and career roadmap.</p>
+          <h1 style={s.heroTitle}>Mission: <span style={{ color: 'var(--primary)' }}>{profile?.full_name?.split(' ')[0]}</span></h1>
+          <p style={s.heroSub}>Your technical growth, career identity, and study roadmap.</p>
         </div>
 
-        {/* FULL WIDTH STACK FOR MOBILE, GRID FOR DESKTOP */}
-        <div style={{ ...s.grid, gridTemplateColumns: isMobile ? '1fr' : '360px 1fr' }}>
+        {/* RESTORED LEFT SIDEBAR LAYOUT */}
+        <div style={{ ...s.layout, gridTemplateColumns: isMobile ? '1fr' : '360px 1fr' }}>
           
-          {/* SIDEBAR / LEFT PANEL */}
-          <div style={s.leftStack}>
+          {/* SIDEBAR COLUMN (LEFT) */}
+          <div style={s.sideCol}>
             <div style={s.card}>
               <div style={s.cardTitle}>Performance</div>
               <div style={s.statsRow}>
@@ -119,13 +121,13 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
             </div>
 
             <div style={{ ...s.card, background: 'linear-gradient(135deg, var(--primary) 0%, #1e3a5f 100%)', color: '#fff', border: 'none' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}><span style={{ fontSize: 10, fontWeight: 900 }}>LEVEL PROGRESS</span><span>🔥 {profile.streak || 1} DAYS</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}><span style={{ fontSize: 10, fontWeight: 900 }}>EXPERIENCE</span><span>🔥 {profile.streak || 1} DAYS</span></div>
               <div style={{ fontSize: 28, fontWeight: 900 }}>Rank {meta.level || 1}</div>
-              <div style={s.xpBar}><div style={{ ...s.xpFill, width: `${((meta.xp || 0) % 500) / 5}%` }} /></div>
+              <div style={s.xpBar}><div style={{ ...s.xpFill, width: `${((meta.xp || 0) % 500) / 5}%`, background: '#fff' }} /></div>
             </div>
 
             <div style={s.card}>
-              <div style={s.cardTitle}>Session History</div>
+              <div style={s.cardTitle}>Session Log</div>
               <div style={s.historyList}>
                 {improveHistory.length > 0 ? improveHistory.map((item, i) => (
                   <div key={i} style={s.historyItem} onClick={() => onViewReport(item.sessionData)}>
@@ -140,10 +142,10 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
             </div>
           </div>
 
-          {/* MAIN CONTENT / RIGHT PANEL */}
-          <div style={s.rightStack}>
+          {/* MAIN COLUMN (RIGHT) */}
+          <div style={s.mainCol}>
             <div style={s.actionRow}>
-              <button style={s.mainAction} onClick={() => onStartSession()}>🚀 INITIALIZE SIMULATION</button>
+              <button style={s.mainAction} onClick={() => onStartSession()}>🚀 START AI INTERVIEW</button>
               <button style={s.subAction} onClick={() => document.getElementById('res-up').click()}>{analyzing ? '⏳' : '🔄 UPDATE RESUME'}</button>
             </div>
 
@@ -166,7 +168,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
                     </div>
                   ))}
                 </div>
-              ) : <p style={s.emptyText}>Click refresh to generate a custom 7-day plan.</p>}
+              ) : <p style={s.emptyText}>No active roadmap. Click refresh to build one.</p>}
             </div>
 
             <div style={s.card}>
@@ -181,9 +183,9 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
                     <p style={s.summaryText}>{meta.summary}</p>
                   </div>
                   <div style={{ marginTop: 20 }}>
-                    <div style={s.smallLabel}>CORE STACK</div>
+                    <div style={s.smallLabel}>CORE TECH STACK</div>
                     <div style={s.skillGrid}>
-                      {meta.skills?.slice(0, 12).map((sk, i) => (
+                      {meta.skills?.slice(0, 15).map((sk, i) => (
                         <div key={i} style={s.skillPill}>
                           <span>{SKILL_ICONS[sk] || SKILL_ICONS[sk.split(' ')[0]] || '🛠️'}</span>
                           {sk}
@@ -196,13 +198,14 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
                 <div style={s.dropzone} onClick={() => document.getElementById('res-up').click()}>
                   <div style={{ fontSize: 40, marginBottom: 12 }}>📄</div>
                   <div style={{ fontWeight: 800 }}>Upload Resume</div>
-                  <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Calibrate your AI interviewer.</p>
+                  <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Sync your career background with the AI.</p>
                 </div>
               )}
             </div>
-            <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} style={{ display: 'none' }} id="res-up" />
           </div>
+
         </div>
+        <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} style={{ display: 'none' }} id="res-up" />
       </div>
     </div>
   )
@@ -210,8 +213,8 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
 const s = {
   page:         { minHeight: '100vh', background: 'var(--bg)', width: '100%', overflowX: 'hidden' },
-  nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 1rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
-  navBrand:     { display: 'flex', alignItems: 'center', gap: 10 },
+  nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 1.5rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
+  navLeft:      { display: 'flex', alignItems: 'center', gap: 12 },
   logo:         { width: 34, height: 34, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 14 },
   navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
   navRight:     { display: 'flex', alignItems: 'center', gap: 10 },
@@ -219,18 +222,18 @@ const s = {
   avatar:       { width: 34, height: 34, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 14 },
   logoutBtn:    { padding: '6px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11, fontWeight: 800, color: 'var(--red)', cursor: 'pointer' },
   
-  container:    { padding: '1.5rem 1rem', maxWidth: 1600, margin: '0 auto' },
+  container:    { padding: '1.5rem 1rem', maxWidth: 1300, margin: '0 auto', boxSizing: 'border-box' },
   hero:         { marginBottom: '2rem' },
-  heroTitle:    { fontSize: 'clamp(24px, 6vw, 36px)', fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.03em' },
-  heroSub:      { fontSize: 14, color: 'var(--muted)', fontWeight: 500, marginTop: 4 },
+  heroTitle:    { fontSize: 'clamp(28px, 6vw, 40px)', fontWeight: 950, letterSpacing: '-0.04em', color: 'var(--text)' },
+  heroSub:      { fontSize: 15, color: 'var(--muted)', fontWeight: 500, marginTop: 4 },
   
-  grid:         { display: 'grid', gap: '1.5rem' },
-  leftStack:    { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-  rightStack:   { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+  layout:       { display: 'grid', gap: '1.5rem', alignItems: 'start' },
+  mainCol:      { display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: 0 },
+  sideCol:      { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
   
-  card:         { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.25rem', boxShadow: 'var(--shadow)' },
+  card:         { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', boxShadow: 'var(--shadow)' },
+  cardTitle:    { fontSize: 10, fontWeight: 950, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 15 },
   cardHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  cardTitle:    { fontSize: 10, fontWeight: 950, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' },
   
   statsRow:     { display: 'flex', marginTop: 15, textAlign: 'center' },
   statBox:      { flex: 1 },
@@ -238,9 +241,9 @@ const s = {
   statLabel:    { fontSize: 9, fontWeight: 800, color: 'var(--muted)' },
   
   xpBar:        { height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 15, overflow: 'hidden' },
-  xpFill:       { height: '100%', background: '#fff' },
+  xpFill:       { height: '100%' },
   
-  historyList:  { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 15 },
+  historyList:  { display: 'flex', flexDirection: 'column', gap: 8 },
   historyItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--surface2)', borderRadius: 10, border: '1px solid var(--border)', cursor: 'pointer' },
   historyText:  { fontSize: 12, fontWeight: 700, color: 'var(--text2)' },
   historyDate:  { fontSize: 9, color: 'var(--muted)', marginTop: 2 },
@@ -249,8 +252,8 @@ const s = {
   mainAction:   { flex: 1, minWidth: 200, padding: '18px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 15, fontWeight: 900, boxShadow: '0 8px 20px var(--primary-glow)' },
   subAction:    { padding: '12px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 12, fontWeight: 800, color: 'var(--text2)' },
   
-  roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '1rem', scrollSnapType: 'x mandatory' },
-  roadmapDay:   { minWidth: 260, background: 'var(--surface2)', borderRadius: 14, padding: '1rem', border: '1px solid var(--border)', scrollSnapAlign: 'start' },
+  roadmapScroll: { display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollSnapType: 'x mandatory' },
+  roadmapDay:   { minWidth: 260, background: 'var(--surface2)', borderRadius: 14, padding: '1.25rem', border: '1px solid var(--border)', scrollSnapAlign: 'start' },
   dayTitle:     { fontSize: 11, fontWeight: 900, color: 'var(--primary)', marginBottom: 12, textTransform: 'uppercase' },
   taskItem:     { background: 'var(--surface)', padding: '10px', borderRadius: 10, marginBottom: 8, display: 'flex', gap: 10, alignItems: 'flex-start', border: '1px solid var(--border)' },
   taskName:     { fontSize: 12, fontWeight: 800, color: 'var(--text2)' },
