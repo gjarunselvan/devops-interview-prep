@@ -1,66 +1,90 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
-  --primary: #2563eb;
-  --primary-glow: rgba(37, 99, 235, 0.4);
+  /* Preferred Base UI Palette */
+  --bg:        #f0f4f8;
+  --surface:   #ffffff;
+  --surface2:  #f8fafc;
+  --border:    #e2e8f0;
+  --border2:   #cbd5e1;
+  --primary:   #2563eb;
+  --primary-h: #1d4ed8;
   --primary-l: #eff6ff;
-  --secondary: #7c3aed;
-  --accent: #f59e0b;
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --text: #0f172a;
-  --text-2: #334155;
-  --muted: #64748b;
-  --border: rgba(0, 0, 0, 0.06);
-  --border-2: rgba(0, 0, 0, 0.1);
-  --green: #10b981;
-  --red: #ef4444;
-  --yellow: #f59e0b;
+  --primary-glow: rgba(37, 99, 235, 0.4);
+  --green:     #16a34a;
+  --green-l:   #f0fdf4;
+  --red:       #dc2626;
+  --red-l:     #fef2f2;
+  --yellow:    #d97706;
+  --yellow-l:  #fffbeb;
+  --purple:    #7c3aed;
+  --purple-l:  #f5f3ff;
+  --text:      #0f172a;
+  --text2:     #334155;
+  --muted:     #64748b;
+  --muted2:    #94a3b8;
+  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,0.1), 0 4px 10px rgba(0,0,0,0.05);
+  --radius:    16px;
   --radius-sm: 8px;
-  --radius: 16px;
   --radius-lg: 24px;
   --sidebar-w: 260px;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-  --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
-  --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
 }
 
 [data-theme='dark'] {
   --bg: #0b0f1a;
   --surface: #151b2d;
-  --surface-2: #1e263c;
+  --surface2: #1e263c;
   --text: #f1f5f9;
-  --text-2: #94a3b8;
+  --text2: #94a3b8;
   --muted: #64748b;
   --border: rgba(255, 255, 255, 0.05);
-  --border-2: rgba(255, 255, 255, 0.1);
+  --border2: rgba(255, 255, 255, 0.1);
   --primary-l: rgba(37, 99, 235, 0.1);
 }
 
 [data-theme='oled'] {
   --bg: #000000;
   --surface: #0a0a0a;
-  --surface-2: #141414;
+  --surface2: #141414;
   --text: #ffffff;
-  --text-2: #a0aec0;
+  --text2: #a0aec0;
   --border: rgba(255, 255, 255, 0.08);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--bg);
+  background: var(--bg);
   color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-button { font-family: inherit; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; border: none; outline: none; display: inline-flex; align-items: center; justify-content: center; }
+input, button, textarea, select { font-family: inherit; }
+
+button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
 button:active { transform: scale(0.96); }
 
-pre, code { font-family: 'JetBrains Mono', monospace; max-width: 100%; overflow-x: auto; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
+
+::placeholder { color: var(--muted2); }
+
+/* Max Density & Layout Helpers */
+@media (max-width: 768px) {
+  :root { --sidebar-w: 0px; --radius: 12px; }
+  .hide-mobile { display: none !important; }
+}
 
 .pro-card {
   background: var(--surface);
@@ -68,31 +92,12 @@ pre, code { font-family: 'JetBrains Mono', monospace; max-width: 100%; overflow-
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   transition: all 0.3s ease;
-  padding: 1.25rem;
 }
 
-/* Max Density Helpers */
-@media (max-width: 768px) {
-  :root { --sidebar-w: 0px; --radius: 12px; }
-  .hide-mobile { display: none !important; }
-}
-
-.grid-main {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
-  gap: 1rem;
-  width: 100%;
-}
-
-.full-bleed {
-  width: 100%;
-  max-width: 100% !important;
-  margin: 0 !important;
+.pro-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border2);
 }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: fadeIn 0.4s ease-out forwards; }
-
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 10px; }

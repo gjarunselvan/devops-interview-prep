@@ -90,14 +90,14 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
       <main style={s.main}>
         <header style={s.topHeader}>
-          <div style={s.headerLeft}><button style={s.menuBtn} onClick={onToggleSidebar}>☰</button><h1 style={s.mainTitle}>Command Center</h1></div>
+          <div style={s.headerLeft}><button style={s.menuBtn} onClick={onToggleSidebar}>☰</button><h1 style={s.mainTitle}>Ready for your interview, <span style={{ color: 'var(--primary)' }}>{profile.full_name.split(' ')[0]}?</span></h1></div>
           <button style={s.primaryBtn} onClick={onStartSession}>Launch Session</button>
         </header>
 
         <div style={s.bentoGrid}>
           {/* Performance Widget */}
           <div style={{ ...s.proCard, gridRow: 'span 1' }}>
-            <div style={s.cardHeader}><span style={s.cardTitle}>PERFORMANCE</span><span style={s.cardBadge}>LIVE</span></div>
+            <div style={s.cardHeader}><span style={s.cardTitle}>01 PERFORMANCE</span><span style={s.cardBadge}>LIVE</span></div>
             <div style={s.statsRow}>
               <div style={s.statBox}><div style={s.statValue}>{avgScore}</div><div style={s.statLabel}>AVG SCORE</div></div>
               <div style={s.statBox}><div style={s.statValue}>{sessions.length}</div><div style={s.statLabel}>SESSIONS</div></div>
@@ -106,7 +106,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
           {/* Player Identity */}
           <div style={{ ...s.proCard, background: 'linear-gradient(135deg, #1e293b, #0f172a)', color: '#fff' }}>
-            <div style={s.cardHeader}><span style={{ ...s.cardTitle, color: '#fff' }}>CAREER RANK</span><div style={s.streakBadge}>🔥 {profile.streak || 1} DAYS</div></div>
+            <div style={s.cardHeader}><span style={{ ...s.cardTitle, color: '#fff' }}>02 CAREER RANK</span><div style={s.streakBadge}>🔥 {profile.streak || 1} DAYS</div></div>
             <div style={s.rankInfo}>
               <div style={s.rankLabel}>LVL {profile.level || 1} <span style={{ float: 'right' }}>{profile.xp || 0} XP</span></div>
               <div style={s.xpBarFull}><div style={{ ...s.xpBarFill, width: `${((profile.xp || 0) % 500) / 5}%` }} /></div>
@@ -115,7 +115,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
           {/* Roadmap - Large Area */}
           <div style={{ ...s.proCard, gridColumn: 'span 2', gridRow: 'span 2' }}>
-            <div style={s.cardHeader}><span style={s.cardTitle}>TECHNICAL ROADMAP</span><button style={s.ghostBtn} onClick={handleGenerateRoadmap} disabled={generating}>REFRESH</button></div>
+            <div style={s.cardHeader}><span style={s.cardTitle}>03 TECHNICAL ROADMAP</span><button style={s.ghostBtn} onClick={handleGenerateRoadmap} disabled={generating}>REFRESH</button></div>
             {roadmap ? (
               <div style={s.roadmapScroll}>
                 {roadmap.days.map((d, i) => (
@@ -138,7 +138,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
           {/* Improvements */}
           <div style={{ ...s.proCard, gridRow: 'span 2' }}>
-            <div style={s.cardHeader}><span style={s.cardTitle}>FOCUS AREAS</span></div>
+            <div style={s.cardHeader}><span style={s.cardTitle}>04 FOCUS AREAS</span></div>
             <div style={s.improveList}>
               {improveHistory.map((item, i) => (
                 <div key={i} style={s.improveItem} onClick={() => onViewReport(item.sessionData)}>
@@ -152,7 +152,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
           {/* Resume Upload */}
           <div style={s.proCard}>
-            <div style={s.cardHeader}><span style={s.cardTitle}>RESUME ENGINE</span></div>
+            <div style={s.cardHeader}><span style={s.cardTitle}>05 RESUME ENGINE</span></div>
             <div style={s.dropzone}>
               <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} style={s.fileInput} id="res-up" />
               <label htmlFor="res-up" style={s.dropLabel}>
@@ -181,7 +181,7 @@ const s = {
   sidebarPersonalization: { padding: '1rem 0.5rem', borderTop: '1px solid var(--border)', marginBottom: '1rem' },
   sidebarLabel: { fontSize: 9, fontWeight: 900, color: 'var(--muted)', marginBottom: 10, letterSpacing: '0.05em' },
   themePicker: { display: 'flex', gap: 6, marginBottom: 10 },
-  themeIcon: { width: 28, height: 28, borderRadius: 6, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 },
+  themeIcon: { width: 28, height: 28, borderRadius: 6, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 },
   miniColor: { width: '100%', height: 20, border: 'none', borderRadius: 4, cursor: 'pointer' },
   sidebarFooter: { borderTop: '1px solid var(--border)', paddingTop: '1rem' },
   userMini: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: '0.75rem' },
@@ -189,7 +189,7 @@ const s = {
   userInfo: { flex: 1 },
   userName: { fontSize: 13, fontWeight: 800, color: 'var(--text)' },
   userLevel: { fontSize: 10, color: 'var(--primary)', fontWeight: 800 },
-  logoutBtn: { width: '100%', padding: '6px', borderRadius: 6, fontSize: 11, fontWeight: 800, background: 'var(--surface-2)', color: 'var(--red)' },
+  logoutBtn: { width: '100%', padding: '6px', borderRadius: 6, fontSize: 11, fontWeight: 800, background: 'var(--surface2)', color: 'var(--red)' },
   
   main: { flex: 1, marginLeft: 'var(--sidebar-w)', padding: '1.5rem 2rem', maxWidth: '100vw' },
   topHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
@@ -202,7 +202,7 @@ const s = {
   proCard: { background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', padding: '1.25rem', display: 'flex', flexDirection: 'column' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' },
   cardTitle: { fontSize: 9, fontWeight: 900, color: 'var(--muted)', letterSpacing: '0.1em' },
-  cardBadge: { fontSize: 8, fontWeight: 900, color: 'var(--green)', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 6px', borderRadius: 4 },
+  cardBadge: { fontSize: 8, fontWeight: 900, color: 'var(--green)', background: 'var(--green-l)', padding: '2px 6px', borderRadius: 4 },
   
   statsRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-around', flex: 1 },
   statBox: { textAlign: 'center' },
@@ -227,13 +227,13 @@ const s = {
   taskLink: { color: 'var(--primary)' },
   
   improveList: { display: 'flex', flexDirection: 'column', gap: 6 },
-  improveItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'var(--surface-2)', borderRadius: 8, cursor: 'pointer' },
+  improveItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'var(--surface2)', borderRadius: 8, cursor: 'pointer' },
   improveInfo: { flex: 1 },
-  improveText: { fontSize: 11, fontWeight: 800, color: 'var(--text-2)', marginBottom: 2 },
+  improveText: { fontSize: 11, fontWeight: 800, color: 'var(--text2)', marginBottom: 2 },
   improveDate: { fontSize: 8, color: 'var(--muted)', fontWeight: 700 },
   improveIcon: { fontSize: 10, color: 'var(--primary)', fontWeight: 900 },
   
-  dropzone: { border: '1.5px dashed var(--border-2)', borderRadius: 10, padding: '1rem', textAlign: 'center', cursor: 'pointer', background: 'var(--surface-2)' },
+  dropzone: { border: '1.5px dashed var(--border2)', borderRadius: 10, padding: '1rem', textAlign: 'center', cursor: 'pointer', background: 'var(--surface2)' },
   fileInput: { display: 'none' },
   dropLabel: { cursor: 'pointer' },
   dropIcon: { fontSize: '1.25rem', marginBottom: 4, display: 'block' },
