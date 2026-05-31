@@ -21,8 +21,6 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
     try {
       const { data: sess } = await supabase.from('sessions').select('*').eq('user_id', profile.id).eq('completed', true).order('created_at', { ascending: false })
       setSessions(sess || [])
-      
-      // Safety check for roadmaps table
       const { data: road, error: roadError } = await supabase.from('roadmaps').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
       if (!roadError) setRoadmap(road?.content || null)
     } catch (err) {
@@ -46,7 +44,6 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const res = await fetch('/api/analyze-resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resumeText: text }) })
       const data = await res.json()
       if (data.result) {
-        // Updated to use metadata to avoid schema errors
         await supabase.from('profiles').update({ 
           resume_text: text, 
           metadata: { ...(profile.metadata || {}), ...data.result } 
@@ -62,12 +59,26 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const res = await fetch('/api/roadmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile, recentSessions: sessions.slice(0, 3), studyTimePref: profile.study_daily_mins || 60 }) })
       const data = await res.json()
       if (data.result) {
-        // Ensure table exists before inserting, or handle failure
         const { error } = await supabase.from('roadmaps').insert({ user_id: profile.id, content: data.result })
-        if (error) throw new Error('Roadmaps table might be missing. Please contact admin.')
+        if (error) throw new Error('Roadmaps table error.')
         setRoadmap(data.result)
       }
     } catch (err) { alert(err.message) } finally { setGenerating(false) }
+  }
+
+  function handleSurpriseMe() {
+    const mixedConfig = {
+      level: { tag: profile.experience_level || 'Mid-Level', label: profile.experience_level || 'Mid-Level' },
+      topics: [], 
+      topicList: 'Full DevOps Stack (Mixed Domains)',
+      mode: 'text',
+      sessionType: 'questions',
+      totalQ: 10,
+      studyTime: profile.study_daily_mins || 60,
+      interviewType: 'mixed',
+      difficulty: 'hard'
+    }
+    onStartSession(mixedConfig)
   }
 
   const avgScore = sessions.length > 0 ? (sessions.reduce((acc, s) => acc + (s.avg_score || 0), 0) / sessions.length).toFixed(1) : '0.0'
@@ -127,7 +138,8 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
           <div style={s.right}>
             <div style={{ display: 'flex', gap: 15, marginBottom: 20 }}>
-              <button style={{ ...s.startBtn, flex: 1, margin: 0 }} onClick={onStartSession}>🚀 Start Interview</button>
+              <button style={{ ...s.startBtn, flex: 2, margin: 0 }} onClick={() => onStartSession()}>🚀 Start Interview</button>
+              <button style={s.surpriseBtn} onClick={handleSurpriseMe}>✨ Surprise Me</button>
               <button style={s.reBtn} onClick={() => document.getElementById('res-up').click()}>{analyzing ? '⏳' : '🔄'} Update Resume</button>
             </div>
 
@@ -207,6 +219,7 @@ const s = {
   improveText:  { fontSize: 12, fontWeight: 700, color: 'var(--text2)' },
   improveDate:  { fontSize: 9, color: 'var(--muted)', marginTop: 3 },
   startBtn:     { padding: '20px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 16, fontWeight: 950, boxShadow: '0 8px 20px var(--primary-glow)' },
+  surpriseBtn:  { flex: 1, padding: '10px 20px', background: 'linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)', color: '#fff', borderRadius: 12, fontSize: 13, fontWeight: 800, border: 'none' },
   reBtn:        { padding: '10px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, fontWeight: 800 },
   roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem' },
   roadmapDay:   { minWidth: 200, borderLeft: '2px solid var(--primary-l)', paddingLeft: 14 },
