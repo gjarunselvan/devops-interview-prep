@@ -240,14 +240,23 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
 
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>06</span><div style={s.cardTitle}>Intensity</div></div>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                 {Q_OPTIONS.map(q => (
                   <button key={q}
-                    style={{ ...s.chipBtn, flex: 1, borderColor: qTarget === q ? 'var(--primary)' : 'var(--border)', background: qTarget === q ? 'var(--primary-l)' : 'var(--surface)', color: qTarget === q ? 'var(--primary)' : 'var(--muted)' }}
-                    onClick={() => setQTarget(q)}>
+                    style={{ ...s.chipBtn, flex: 1, borderColor: (customQ ? '' : qTarget) === q ? 'var(--primary)' : 'var(--border)', background: (customQ ? '' : qTarget) === q ? 'var(--primary-l)' : 'var(--surface)', color: (customQ ? '' : qTarget) === q ? 'var(--primary)' : 'var(--muted)' }}
+                    onClick={() => { setQTarget(q); setCustomQ(''); }}>
                     {q} Qs
                   </button>
                 ))}
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <input 
+                  type="number" 
+                  placeholder="Or enter custom Q count..." 
+                  style={s.input} 
+                  value={customQ} 
+                  onChange={e => { setCustomQ(e.target.value); setQTarget(null); }}
+                />
               </div>
               <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Prep Budget: {studyTime}m/day</div>
               <input type="range" min="15" max="240" step="15" value={studyTime} onChange={e => setStudyTime(e.target.value)} style={{ width: '100%' }} />
