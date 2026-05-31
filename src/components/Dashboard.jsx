@@ -58,8 +58,8 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const data = await res.json()
       if (data.result) {
         const { error } = await supabase.from('roadmaps').insert({ user_id: profile.id, content: data.result })
-        if (error) alert('Error: "roadmaps" table error.')
-        else setRoadmap(data.result)
+        if (error) throw new Error('Roadmaps table error.')
+        setRoadmap(data.result)
       }
     } catch (err) { console.error(err) } finally { setGenerating(false) }
   }
@@ -222,7 +222,7 @@ const s = {
   logo:         { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
   navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
   navRight:     { display: 'flex', alignItems: 'center', gap: 15 },
-  navLinkBtn:   { background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: 'var(--text2)' },
+  navLinkBtn:   { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)' },
   themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
   avatar:       { width: 32, height: 32, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 12 },
   navName:      { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
@@ -241,7 +241,7 @@ const s = {
   statVal:      { fontSize: 32, fontWeight: 950, color: 'var(--text)', fontFamily: 'JetBrains Mono,monospace' },
   statLabel:    { fontSize: 9, fontWeight: 800, color: 'var(--muted)' },
   xpBar:        { height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 15, overflow: 'hidden' },
-  xpFill:       { height: '100%', background: '#fff' },
+  xpFill:       { height: '100%', background: 'var(--surface)' },
   improveList:  { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 15 },
   improveItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, cursor: 'pointer' },
   improveText:  { fontSize: 12, fontWeight: 700, color: 'var(--text2)' },
@@ -250,7 +250,7 @@ const s = {
   surpriseBtn:  { flex: 1, padding: '10px 20px', background: 'linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)', color: '#fff', borderRadius: 12, fontSize: 13, fontWeight: 800, border: 'none', cursor: 'pointer' },
   reBtn:        { padding: '10px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: 'pointer' },
   roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem' },
-  roadmapDay:   { minWidth: 200, borderLeft: '3px solid var(--primary-l)', paddingLeft: 14 },
+  roadmapDay:   { minWidth: 200, borderLeft: '2px solid var(--primary-l)', paddingLeft: 14 },
   dayTitle:     { fontSize: 10, fontWeight: 900, color: 'var(--primary)', marginBottom: 10, textTransform: 'uppercase' },
   taskItem:     { background: 'var(--surface2)', padding: '10px', borderRadius: 8, marginBottom: 8, transition: 'all 0.2s' },
   taskName:     { fontSize: 11, fontWeight: 800, color: 'var(--text2)' },

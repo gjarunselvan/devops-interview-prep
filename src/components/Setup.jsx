@@ -88,7 +88,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
   }, [profile])
 
   function toggleTopic(t) {
-    if (t.id === 'custom_entry') return // Click handler is on input
+    if (t.id === 'custom_entry') return 
     setTopics(prev => prev.find(x => x.id === t.id) ? prev.filter(x => x.id !== t.id) : [...prev, t])
   }
 
@@ -116,7 +116,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
   return (
     <div style={s.page}>
       <nav style={s.nav}>
-        <div style={{ ...s.navBrand, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }} onClick={onGoBack}>
+        <div style={{ ...s.navBrand, cursor: 'pointer' }} onClick={onGoBack}>
           <div style={s.logo}>DI</div>
           <span style={s.navTitle}>DevOps Initialization</span>
         </div>
@@ -139,7 +139,6 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
 
         <div style={s.grid}>
           <div style={s.configPanel}>
-            {/* Seniority */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>01</span><div style={s.cardTitle}>Seniority Level</div></div>
               <div style={s.levelGrid}>
@@ -163,7 +162,6 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
-            {/* Track */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>02</span><div style={s.cardTitle}>Interview Track</div></div>
               <div style={s.typeStack}>
@@ -183,7 +181,6 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
-            {/* Tech Stack */}
             {(type !== 'behavioral' && type !== 'surprise') && (
               <div style={s.card}>
                 <div style={s.cardHeader}><span style={s.step}>03</span><div style={s.cardTitle}>Technical Focus</div></div>
@@ -234,7 +231,6 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
           </div>
 
           <div style={s.settingsPanel}>
-            {/* Difficulty */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>04</span><div style={s.cardTitle}>Session Difficulty</div></div>
               <div style={{ display: 'flex', gap: 12 }}>
@@ -249,7 +245,6 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
-            {/* Mode */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>05</span><div style={s.cardTitle}>Mode</div></div>
               <div style={{ display: 'flex', gap: 12 }}>
@@ -264,7 +259,6 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
-            {/* Intensity */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>06</span><div style={s.cardTitle}>Intensity</div></div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -295,7 +289,7 @@ const s = {
   page:         { minHeight: '100vh', background: 'var(--bg)', width: '100%' },
   nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
   navBrand:     { display: 'flex', alignItems: 'center', gap: 10 },
-  logo:         { width: 36, height: 36, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
+  logo:         { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
   navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
   navRight:     { display: 'flex', alignItems: 'center', gap: 15 },
   navLinkBtn:   { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6 },
@@ -313,15 +307,15 @@ const s = {
   step:         { width: 32, height: 32, background: 'var(--primary-l)', color: 'var(--primary)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, fontFamily: 'JetBrains Mono,monospace' },
   cardTitle:    { fontSize: 18, fontWeight: 850, color: 'var(--text)' },
   levelGrid:    { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 },
-  levelBtn:     { padding: '16px 10px', borderRadius: 12, border: '2px solid', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' },
+  levelBtn:     { padding: '16px 10px', borderRadius: 12, border: '2px solid', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s', background: 'var(--surface)' },
   typeStack:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
-  trackBtn:     { padding: '16px', borderRadius: 14, border: '2px solid', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' },
+  trackBtn:     { padding: '16px', borderRadius: 14, border: '2px solid', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', background: 'var(--surface)' },
   groupsContainer: { display: 'flex', flexDirection: 'column', gap: 32 },
   groupName:    { fontSize: 12, fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 },
   topicGrid:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12 },
-  topicBtn:     { padding: '16px 10px', borderRadius: 14, border: '2px solid', cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'all 0.2s' },
-  modeBtn:      { padding: '24px 12px', borderRadius: 16, border: '2px solid', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' },
-  chipBtn:      { padding: '12px 18px', borderRadius: 12, border: '2px solid', cursor: 'pointer', fontSize: 14, fontWeight: 800, transition: 'all 0.2s' },
+  topicBtn:     { padding: '16px 10px', borderRadius: 14, border: '2px solid', cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'all 0.2s', background: 'var(--surface)' },
+  modeBtn:      { padding: '24px 12px', borderRadius: 16, border: '2px solid', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s', background: 'var(--surface)' },
+  chipBtn:      { padding: '12px 18px', borderRadius: 12, border: '2px solid', cursor: 'pointer', fontSize: 14, fontWeight: 800, transition: 'all 0.2s', background: 'var(--surface)' },
   startBtn:     { width: '100%', padding: '22px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 16, fontSize: 18, fontWeight: 950, cursor: 'pointer', boxShadow: '0 12px 24px var(--primary-glow)' },
-  input:        { width: '100%', padding: '14px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--surface2)', fontSize: 14, fontWeight: 600, outline: 'none' }
+  input:        { width: '100%', padding: '14px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--surface2)', fontSize: 14, fontWeight: 600, outline: 'none', color: 'var(--text)' }
 }
