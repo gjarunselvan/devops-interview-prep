@@ -1,49 +1,58 @@
 import { useState, useEffect } from 'react'
 
 const LEVELS = [
-  { id: '0-1', label: '0–1y', tag: 'Fresher',    color: '#10b981' },
-  { id: '1-3', label: '1–3y', tag: 'Junior',     color: '#2563eb' },
-  { id: '3-5', label: '3–5y', tag: 'Mid Level',  color: '#f59e0b' },
-  { id: '5-8', label: '5–8y', tag: 'Senior',     color: '#ef4444' },
-  { id: '8+',  label: '8y+',  tag: 'Architect',  color: '#7c3aed' },
+  { id: '0-1', label: '0–1 years', tag: 'Fresher',             color: '#16a34a' },
+  { id: '1-3', label: '1–3 years', tag: 'Junior',              color: '#2563eb' },
+  { id: '3-5', label: '3–5 years', tag: 'Mid Level',           color: '#d97706' },
+  { id: '5-8', label: '5–8 years', tag: 'Senior',              color: '#ea580c' },
+  { id: '8+',  label: '8+ years',  tag: 'Principal/Architect', color: '#7c3aed' },
 ]
 
-const TOPIC_GROUPS = [
-  {
-    name: 'Cloud & Infrastructure',
-    topics: [
-      { id: 'aws', label: 'AWS', icon: '☁️' },
-      { id: 'gcp', label: 'GCP', icon: '🔵' },
-      { id: 'azure', label: 'Azure', icon: '🟦' },
-      { id: 'terraform', label: 'Terraform', icon: '🏗️' },
-      { id: 'ansible', label: 'Ansible', icon: '⚙️' },
-    ]
-  },
-  {
-    name: 'Containers & Dev',
-    topics: [
-      { id: 'kubernetes', label: 'K8s', icon: '☸️' },
-      { id: 'docker', label: 'Docker', icon: '🐳' },
-      { id: 'cicd', label: 'CI/CD', icon: '🔄' },
-      { id: 'git', label: 'Git', icon: '🌿' },
-    ]
-  }
+const TOPICS = [
+  { id: 'aws',        label: 'AWS',           icon: '☁️'  },
+  { id: 'kubernetes', label: 'Kubernetes',    icon: '🐳'  },
+  { id: 'docker',     label: 'Docker',        icon: '📦'  },
+  { id: 'terraform',  label: 'Terraform',     icon: '🏗️'  },
+  { id: 'ansible',    label: 'Ansible',       icon: '⚙️'  },
+  { id: 'cicd',       label: 'CI/CD',         icon: '🔄'  },
+  { id: 'linux',      label: 'Linux',         icon: '🐧'  },
+  { id: 'git',        label: 'Git',           icon: '🌿'  },
+  { id: 'monitoring', label: 'Monitoring',    icon: '📊'  },
+  { id: 'security',   label: 'DevSecOps',     icon: '🔐'  },
+  { id: 'networking', label: 'Networking',    icon: '🌐'  },
+  { id: 'gcp',        label: 'GCP',           icon: '🔵'  },
+  { id: 'azure',      label: 'Azure',         icon: '🟦'  },
+  { id: 'helm',       label: 'Helm',          icon: '⛵'  },
+  { id: 'argocd',     label: 'Argo CD',       icon: '🤖'  },
+  { id: 'jenkins',    label: 'Jenkins',       icon: '🏺'  },
+  { id: 'prometheus', label: 'Prometheus',    icon: '🔥'  },
+  { id: 'elk',        label: 'ELK Stack',     icon: '📋'  },
+  { id: 'vault',      label: 'Vault',         icon: '🔑'  },
+  { id: 'mlops',      label: 'MLOps',         icon: '🧠'  },
+  { id: 'custom',     label: 'Custom Topic',  icon: '✏️'  },
 ]
 
-export default function Setup({ profile, onStart, onLogout, onGoBack, sidebarOpen, onToggleSidebar }) {
+const Q_OPTIONS   = [5, 10, 15, 20]
+const TIME_OPTIONS = [15, 30, 45, 60]
+
+export { LEVELS, TOPICS, Q_OPTIONS, TIME_OPTIONS }
+
+export default function Setup({ profile, onStart, onLogout, onGoBack }) {
   const [level,       setLevel]       = useState(null)
   const [topics,      setTopics]      = useState([])
+  const [customTopic, setCustomTopic] = useState('')
   const [mode,        setMode]        = useState('text')
   const [type,        setType]        = useState('technical')
+  const [sessionType, setSessionType] = useState('questions')
   const [qTarget,     setQTarget]     = useState(10)
+  const [timeTarget,  setTimeTarget]  = useState(30)
   const [studyTime,   setStudyTime]   = useState(profile?.study_daily_mins || 60)
+  const [customQ,     setCustomQ]     = useState('')
 
   useEffect(() => {
     const recommended = profile?.metadata?.recommendedTopics || []
     const initialTopics = []
-    TOPIC_GROUPS.forEach(group => {
-      group.topics.forEach(t => { if (recommended.includes(t.id)) initialTopics.push(t) })
-    })
+    TOPICS.forEach(t => { if (recommended.includes(t.id)) initialTopics.push(t) })
     if (initialTopics.length > 0) setTopics(initialTopics)
     if (profile?.experience_level) {
       const foundLevel = LEVELS.find(l => l.tag === profile.experience_level || l.id === profile.experience_level)
@@ -55,165 +64,176 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, sidebarOpe
     setTopics(prev => prev.find(x => x.id === t.id) ? prev.filter(x => x.id !== t.id) : [...prev, t])
   }
 
-  const topicList = topics.map(t => t.label).join(', ')
-  const canStart  = level && (type === 'behavioral' || topics.length > 0)
+  const topicList = topics.map(t => t.id === 'custom' ? customTopic : t.label).filter(Boolean).join(', ')
+  const totalQ    = sessionType === 'questions' ? (parseInt(customQ) || qTarget) : null
+  const canStart  = level && (type === 'behavioral' || topics.length > 0) && !(topics.find(t => t.id === 'custom') && !customTopic.trim())
+
+  function handleStart() {
+    if (!canStart) return
+    onStart({ level, topics: type === 'behavioral' ? [] : topics, topicList: type === 'behavioral' ? 'Behavioral & Culture' : topicList, mode, sessionType, totalQ, timeTarget, studyTime, interviewType: type })
+  }
 
   return (
     <div style={s.page}>
-      {sidebarOpen && <div style={s.overlay} onClick={onToggleSidebar} />}
+      <nav style={s.nav}>
+        <div style={{ ...s.navBrand, cursor: 'pointer' }} onClick={onGoBack}>
+          <div style={s.logo}>DI</div>
+          <span style={s.navTitle}>DevOps Interview</span>
+        </div>
+        <div style={s.navRight}>
+          <div style={s.avatar}>{profile?.full_name?.[0] || 'U'}</div>
+          <span style={s.navName}>{profile?.full_name}</span>
+          <button style={s.logoutBtn} onClick={onLogout}>Sign out</button>
+        </div>
+      </nav>
 
-      <aside style={{ ...s.sidebar, transform: `translateX(${sidebarOpen ? '0' : '-100%'})` }}>
-        <div style={s.sidebarHeader}>
-          <div style={s.logoSmall}>DI</div>
-          <span style={s.logoText}>DevOps Prep</span>
+      <div style={s.content}>
+        <div style={s.hero}>
+          <h2 style={s.heroTitle}>Ready for your interview, <span style={{ color: 'var(--primary)' }}>{profile?.full_name?.split(' ')[0]}?</span></h2>
+          <p style={s.heroSub}>Configure your session and let's get started.</p>
         </div>
-        <div style={s.sidebarNav}>
-          <button style={s.navItem} onClick={onGoBack}><span style={s.navIcon}>📊</span> Dashboard</button>
-          <button style={{ ...s.navItem, ...s.navItemActive }}><span style={s.navIcon}>🚀</span> New Interview</button>
-        </div>
-        <div style={s.sidebarFooter}>
-          <button style={s.backBtn} onClick={onGoBack}>← Back to Home</button>
-        </div>
-      </aside>
-
-      <main style={s.main}>
-        <header style={s.topHeader}>
-          <div style={s.headerLeft}>
-            <button style={s.menuBtn} onClick={onToggleSidebar}>☰</button>
-            <div>
-              <h1 style={s.mainTitle}>New Session</h1>
-              <p style={s.mainSubtitle}>Configure your interview scenario</p>
-            </div>
-          </div>
-          <button style={{ ...s.primaryBtn, opacity: canStart ? 1 : 0.5 }} disabled={!canStart} onClick={() => onStart({ level, topics, topicList, mode, sessionType: 'questions', totalQ: qTarget, studyTime, interviewType: type })}>
-            Launch
-          </button>
-        </header>
 
         <div style={s.grid}>
-          <div style={s.proCard}>
-            <h3 style={s.cardTitle}>Focus</h3>
-            <div style={s.typeGrid}>
-              {[{ id: 'technical', icon: '💻', title: 'Tech' }, { id: 'behavioral', icon: '🤝', title: 'Soft' }].map(it => (
-                <button key={it.id} 
-                  style={{ ...s.typeBtn, borderColor: type === it.id ? 'var(--primary)' : 'var(--border)', background: type === it.id ? 'var(--primary-l)' : 'var(--surface)' }}
-                  onClick={() => setType(it.id)}>
-                  <span style={s.typeIcon}>{it.icon}</span>
-                  <div style={s.typeTitle}>{it.title}</div>
-                </button>
-              ))}
-            </div>
-
-            <h3 style={{ ...s.cardTitle, marginTop: '2rem' }}>Experience</h3>
-            <div style={s.levelGrid}>
-              {LEVELS.map(l => (
-                <button key={l.id}
-                  style={{ ...s.levelBtn, borderColor: level?.id === l.id ? l.color : 'var(--border)', background: level?.id === l.id ? `${l.color}15` : 'var(--surface)', color: level?.id === l.id ? l.color : 'var(--text-2)' }}
-                  onClick={() => setLevel(l)}>
-                  <div style={s.levelLabel}>{l.label}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={s.proCard}>
-            {type === 'technical' ? (
-              <>
-                <h3 style={s.cardTitle}>Tech Stack</h3>
-                <div style={s.topicGrid}>
-                  {TOPIC_GROUPS.flatMap(g => g.topics).map(t => {
-                    const sel = !!topics.find(x => x.id === t.id)
-                    return (
-                      <button key={t.id}
-                        style={{ ...s.topicBtn, borderColor: sel ? 'var(--primary)' : 'var(--border)', background: sel ? 'var(--primary-l)' : 'var(--surface)', color: sel ? 'var(--primary)' : 'var(--text-2)' }}
-                        onClick={() => toggleTopic(t)}>
-                        <span style={s.tIcon}>{t.icon}</span>
-                        <span style={s.tLabel}>{t.label}</span>
-                      </button>
-                    )
-                  })}
+          <div>
+            <div style={s.card}>
+              <div style={s.cardHeader}>
+                <span style={s.step}>01</span>
+                <div>
+                  <div style={s.cardTitle}>Experience Level</div>
+                  <div style={s.cardDesc}>Select your years of experience</div>
                 </div>
-              </>
-            ) : (
-              <div style={s.behavioralInfo}>
-                <div style={s.infoIcon}>🤝</div>
-                <p style={s.infoDesc}>Alex will focus on leadership and SRE culture.</p>
               </div>
-            )}
+              <div style={s.levelGrid}>
+                {LEVELS.map(l => (
+                  <button key={l.id}
+                    style={{ ...s.levelBtn, borderColor: level?.id === l.id ? l.color : 'var(--border)', background: level?.id === l.id ? `${l.color}12` : '#fff', color: level?.id === l.id ? l.color : 'var(--muted)' }}
+                    onClick={() => setLevel(l)}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>{l.label}</div>
+                    <div style={{ fontSize: 10, marginTop: 2, fontFamily: 'JetBrains Mono,monospace' }}>{l.tag}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={s.card}>
+              <div style={s.cardHeader}>
+                <span style={s.step}>02</span>
+                <div>
+                  <div style={s.cardTitle}>Interview Type</div>
+                  <div style={s.cardDesc}>Technical track or Behavioral focus</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {[{ id: 'technical', label: 'Technical' }, { id: 'behavioral', label: 'Behavioral' }].map(it => (
+                  <button key={it.id} 
+                    style={{ ...s.chipBtn, flex: 1, borderColor: type === it.id ? 'var(--primary)' : 'var(--border)', background: type === it.id ? 'var(--primary-l)' : '#fff', color: type === it.id ? 'var(--primary)' : 'var(--muted)' }}
+                    onClick={() => setType(it.id)}>
+                    {it.label}
+                  </button>
+                ))}
+              </div>
+
+              {type === 'technical' && (
+                <>
+                  <div style={{ ...s.cardTitle, marginTop: 20, fontSize: 14 }}>Select Topics</div>
+                  <div style={s.topicGrid}>
+                    {TOPICS.map(t => {
+                      const sel = !!topics.find(x => x.id === t.id)
+                      return (
+                        <button key={t.id}
+                          style={{ ...s.topicBtn, borderColor: sel ? 'var(--primary)' : 'var(--border)', background: sel ? 'var(--primary-l)' : '#fff', color: sel ? 'var(--primary)' : 'var(--muted)' }}
+                          onClick={() => toggleTopic(t)}>
+                          <span style={{ fontSize: 18 }}>{t.icon}</span>
+                          <span style={{ fontSize: 10, marginTop: 3 }}>{t.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
-          <div style={s.proCard}>
-            <h3 style={s.cardTitle}>Settings</h3>
-            <div style={s.modeGrid}>
-              {['text', 'voice'].map(m => (
-                <button key={m} style={{ ...s.modeBtn, background: mode === m ? 'var(--primary-l)' : 'var(--surface-2)', color: mode === m ? 'var(--primary)' : 'var(--muted)' }} onClick={() => setMode(m)}>
-                  {m.toUpperCase()}
-                </button>
-              ))}
+          <div>
+            <div style={s.card}>
+              <div style={s.cardHeader}>
+                <span style={s.step}>03</span>
+                <div>
+                  <div style={s.cardTitle}>Interview Mode</div>
+                  <div style={s.cardDesc}>How would you like to answer?</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                {[
+                  { id: 'text',  icon: '⌨️', title: 'Text Mode' },
+                  { id: 'voice', icon: '🎙️', title: 'Voice Mode' },
+                ].map(m => (
+                  <button key={m.id}
+                    style={{ ...s.modeBtn, flex: 1, borderColor: mode === m.id ? 'var(--primary)' : 'var(--border)', background: mode === m.id ? 'var(--primary-l)' : '#fff', color: mode === m.id ? 'var(--primary)' : 'var(--text2)' }}
+                    onClick={() => setMode(m.id)}>
+                    <div style={{ fontSize: 24, marginBottom: 4 }}>{m.icon}</div>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{m.title}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div style={s.qControl}>
-              <div style={s.qLabel}>Questions: <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{qTarget}</span></div>
-              <input type="range" min="5" max="25" step="5" value={qTarget} onChange={e => setQTarget(e.target.value)} style={s.range} />
+
+            <div style={s.card}>
+              <div style={s.cardHeader}>
+                <span style={s.step}>04</span>
+                <div>
+                  <div style={s.cardTitle}>Commitment</div>
+                  <div style={s.cardDesc}>Session length and study time</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                {Q_OPTIONS.map(q => (
+                  <button key={q}
+                    style={{ ...s.chipBtn, flex: 1, borderColor: qTarget === q ? 'var(--primary)' : 'var(--border)', background: qTarget === q ? 'var(--primary-l)' : '#fff', color: qTarget === q ? 'var(--primary)' : 'var(--muted)' }}
+                    onClick={() => setQTarget(q)}>
+                    {q} Qs
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Daily Study: {studyTime}m</div>
+              <input type="range" min="15" max="240" step="15" value={studyTime} onChange={e => setStudyTime(e.target.value)} style={{ width: '100%' }} />
             </div>
+
+            <button style={{ ...s.startBtn, opacity: canStart ? 1 : 0.4 }} disabled={!canStart} onClick={handleStart}>
+              Start Interview →
+            </button>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   )
 }
 
 const s = {
-  page: { minHeight: '100vh', background: 'var(--bg)', display: 'flex' },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 },
-  sidebar: { width: 'var(--sidebar-w)', minWidth: 260, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '1.5rem', position: 'fixed', height: '100vh', zIndex: 100, transition: 'transform 0.3s ease' },
-  sidebarHeader: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: '2.5rem' },
-  logoSmall: { width: 32, height: 32, background: 'var(--primary)', color: '#fff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 },
-  logoText: { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.01em' },
-  sidebarNav: { display: 'flex', flexDirection: 'column', gap: 6, flex: 1 },
-  navItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, fontSize: 14, fontWeight: 600, color: 'var(--muted)', background: 'none', textAlign: 'left' },
-  navItemActive: { background: 'var(--primary-l)', color: 'var(--primary)' },
-  navIcon: { fontSize: 16 },
-  sidebarFooter: { borderTop: '1px solid var(--border)', paddingTop: '1.5rem' },
-  backBtn: { background: 'none', color: 'var(--muted)', fontWeight: 700, fontSize: 12 },
-  
-  main: { flex: 1, marginLeft: 'var(--sidebar-w)', padding: 'clamp(1rem, 5vw, 2.5rem)', maxWidth: '100vw' },
-  topHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', flexWrap: 'wrap', gap: '1rem' },
-  headerLeft: { display: 'flex', alignItems: 'center', gap: '1rem' },
-  menuBtn: { fontSize: '1.5rem', background: 'none', display: 'none' },
-  mainTitle: { fontSize: '1.75rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em' },
-  mainSubtitle: { fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 500 },
-  primaryBtn: { background: 'var(--primary)', color: '#fff', padding: '12px 20px', borderRadius: 12, fontWeight: 700, fontSize: 13, boxShadow: '0 4px 12px var(--primary-glow)' },
-  
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '1.5rem', alignItems: 'start' },
-  proCard: { background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', padding: '1.5rem' },
-  cardTitle: { fontSize: 10, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: '1.25rem', letterSpacing: '0.05em' },
-  
-  typeGrid: { display: 'flex', gap: 8 },
-  typeBtn: { flex: 1, padding: '1rem', borderRadius: 12, border: '2px solid', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
-  typeIcon: { fontSize: 20 },
-  typeTitle: { fontSize: 12, fontWeight: 800 },
-  
-  levelGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 8 },
-  levelBtn: { padding: '8px', borderRadius: 8, border: '2px solid', textAlign: 'center' },
-  levelLabel: { fontWeight: 800, fontSize: 12 },
-  
-  topicGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 },
-  topicBtn: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px', borderRadius: 12, border: '2px solid' },
-  tIcon: { fontSize: 16, marginBottom: 4 },
-  tLabel: { fontSize: 11, fontWeight: 700 },
-  
-  behavioralInfo: { background: 'var(--primary-l)', borderRadius: 12, padding: '2rem 1.5rem', textAlign: 'center' },
-  infoIcon: { fontSize: '2rem', marginBottom: '1rem' },
-  infoDesc: { fontSize: '0.9rem', color: 'var(--text-2)', lineHeight: 1.5 },
-  
-  modeGrid: { display: 'flex', gap: 8, marginBottom: '1.5rem' },
-  modeBtn: { flex: 1, padding: '8px', borderRadius: 8, fontWeight: 800, fontSize: 10 },
-  qControl: { marginTop: '1rem' },
-  qLabel: { fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--text)' },
-  range: { width: '100%' }
-}
-
-if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-  s.sidebar.transform = `translateX(${s.sidebar.transform === 'translateX(0)' ? '0' : '-100%'})`
-  s.menuBtn.display = 'block'
+  page:         { minHeight: '100vh', background: 'var(--bg)' },
+  nav:          { background: '#fff', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
+  navBrand:     { display: 'flex', alignItems: 'center', gap: 10 },
+  logo:         { width: 36, height: 36, background: 'var(--primary)', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 14 },
+  navTitle:     { fontWeight: 700, fontSize: 16, color: 'var(--text)' },
+  navRight:     { display: 'flex', alignItems: 'center', gap: 12 },
+  avatar:       { width: 34, height: 34, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 700, fontSize: 14 },
+  navName:      { fontSize: 14, fontWeight: 500, color: 'var(--text2)' },
+  logoutBtn:    { padding: '6px 14px', border: '1.5px solid var(--border)', borderRadius: 7, background: '#fff', color: 'var(--muted)', fontSize: 13, fontWeight: 500, cursor: 'pointer' },
+  content:      { maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem' },
+  hero:         { marginBottom: '2rem' },
+  heroTitle:    { fontSize: 26, fontWeight: 800, color: 'var(--text)' },
+  heroSub:      { fontSize: 15, color: 'var(--muted)', marginTop: 4 },
+  grid:         { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' },
+  card:         { background: '#fff', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', marginBottom: '1.25rem', boxShadow: 'var(--shadow)' },
+  cardHeader:   { display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
+  step:         { width: 28, height: 28, background: 'var(--primary-l)', color: 'var(--primary)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, fontFamily: 'JetBrains Mono,monospace', flexShrink: 0, marginTop: 2 },
+  cardTitle:    { fontSize: 15, fontWeight: 700, color: 'var(--text)' },
+  cardDesc:     { fontSize: 12, color: 'var(--muted)', marginTop: 2 },
+  levelGrid:    { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 },
+  levelBtn:     { padding: '12px 8px', borderRadius: 8, border: '1.5px solid', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s', background: '#fff' },
+  topicGrid:    { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 7, marginTop: 12 },
+  topicBtn:     { padding: '10px 4px', borderRadius: 8, border: '1.5px solid', cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'all 0.15s' },
+  modeBtn:      { padding: '16px 12px', borderRadius: 10, border: '1.5px solid', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' },
+  chipBtn:      { padding: '9px 14px', borderRadius: 7, border: '1.5px solid', cursor: 'pointer', fontSize: 13, transition: 'all 0.15s', background: '#fff' },
+  startBtn:     { width: '100%', padding: '14px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' },
 }
