@@ -26,7 +26,6 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    // ... rest of auth logic ...
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         await loadUserAndGo(session.user)
@@ -49,7 +48,6 @@ export default function App() {
   }, [theme, bgColor])
 
   async function loadUserAndGo(authUser) {
-    // Get or auto-create profile
     let { data: profile } = await supabase
       .from('profiles')
       .select('*')
@@ -69,13 +67,11 @@ export default function App() {
     setUser(authUser)
     setProfile(profile || { full_name: authUser.email, username: authUser.email })
     
-    // Set personalization & gamification from profile
     if (profile?.theme) setTheme(profile.theme)
     if (profile?.bg_color) setBgColor(profile.bg_color)
     setXp(profile?.xp || 0)
     setLevel(profile?.level || 1)
     
-    // Streak Calculation
     let currentStreak = profile?.streak || 0
     const lastActive = profile?.last_active ? new Date(profile.last_active) : null
     const today = new Date(); today.setHours(0,0,0,0)
@@ -86,16 +82,15 @@ export default function App() {
       if (diff === 1) {
         currentStreak += 1
       } else if (diff > 1) {
-        currentStreak = 1 // Reset if missed a day
+        currentStreak = 1 
       }
     } else {
-      currentStreak = 1 // First day
+      currentStreak = 1
     }
     
     setStreak(currentStreak)
     await supabase.from('profiles').update({ streak: currentStreak, last_active: today.toISOString() }).eq('id', authUser.id)
 
-    // Check for incomplete session
     const { data: incompleteArr } = await supabase
       .from('sessions')
       .select('*')
@@ -117,6 +112,7 @@ export default function App() {
           sessionType: incomplete.total_questions ? 'questions' : 'time',
           totalQ: incomplete.total_questions,
           timeTarget: 30,
+          interviewType: incomplete.interview_type || 'technical'
         })
         setHistory(incomplete.history)
         setSessionId(incomplete.id)
@@ -154,7 +150,32 @@ export default function App() {
     setSidebarOpen(false)
   }
 
-  // ... (omitting handleSaveSession and handleComplete) ...
+  async function handleSaveSession(newHistory, completed) {
+    if (!sessionId) return
+    const avgScore = newHistory.length > 0
+      ? Math.round((newHistory.reduce((a, b) => a + b.score, 0) / newHistory.length) * 10) / 10
+      : 0
+    const allImprove = [...new Set(newHistory.flatMap(h => h.improvePoints || []))].filter(Boolean)
+    await supabase.from('sessions').update({
+      history: newHistory, improve_points: allImprove, avg_score: avgScore, completed,
+    }).eq('id', sessionId)
+  }
+
+  async function handleComplete(finalHistory) {
+    setHistory(finalHistory)
+    await handleSaveSession(finalHistory, true)
+    
+    // XP Calculation
+    const sessionXp = 50 + (finalHistory.length * 10)
+    const newXp = xp + sessionXp
+    const newLevel = Math.floor(newXp / 500) + 1
+    
+    setXp(newXp)
+    setLevel(newLevel)
+    await supabase.from('profiles').update({ xp: newXp, level: newLevel }).eq('id', user.id)
+    
+    setScreen(SCREENS.REPORT)
+  }
 
   async function handlePersonalize(newTheme, newColor) {
     setTheme(newTheme)
@@ -163,6 +184,12 @@ export default function App() {
   }
 
   function toggleSidebar() { setSidebarOpen(!sidebarOpen) }
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    setUser(null); setProfile(null); setConfig(null); setHistory([]); setSessionId(null)
+    setScreen(SCREENS.AUTH)
+  }
 
   if (loading) return <LoadingScreen />
 
