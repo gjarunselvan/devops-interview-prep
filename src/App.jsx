@@ -191,6 +191,16 @@ export default function App() {
           theme={theme}
           bgColor={bgColor}
           onPersonalize={handlePersonalize}
+          onViewReport={(sess) => {
+            setConfig({
+              level: { tag: sess.level, label: sess.level },
+              topicList: sess.topics,
+              mode: sess.mode,
+            })
+            setHistory(sess.history)
+            setSessionId(sess.id)
+            setScreen(SCREENS.REPORT)
+          }}
         />
       )}
       {screen === SCREENS.SETUP     && <Setup profile={profile} onStart={handleStart} onLogout={handleLogout} onGoBack={() => setScreen(SCREENS.DASHBOARD)} />}
