@@ -180,7 +180,17 @@ export default function App() {
   async function handlePersonalize(newTheme, newColor) {
     setTheme(newTheme)
     setBgColor(newColor)
-    await supabase.from('profiles').update({ theme: newTheme, bg_color: newColor }).eq('id', user.id)
+    // Instant DOM update
+    document.documentElement.setAttribute('data-theme', newTheme)
+    if (newColor) {
+      document.documentElement.style.setProperty('--bg', newColor)
+    } else {
+      document.documentElement.style.removeProperty('--bg')
+    }
+    // Async DB update
+    if (user?.id) {
+      await supabase.from('profiles').update({ theme: newTheme, bg_color: newColor }).eq('id', user.id)
+    }
   }
 
   function toggleSidebar() { setSidebarOpen(!sidebarOpen) }
