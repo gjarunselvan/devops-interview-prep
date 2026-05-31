@@ -1,20 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
+import Editor from 'react-simple-code-editor'
+import { highlight, languages } from 'prismjs/components/prism-core'
+import 'prismjs/components/prism-yaml'
+import 'prismjs/components/prism-clike'
+import 'prismjs/themes/prism.css'
 
 const INTERVIEWER_NAME = 'Alex'
-
-const TRANSITIONS = [
-  "Great, let's move on to the next one.",
-  "Thanks for that answer. Here's your next question.",
-  "Alright, moving forward.",
-  "Good. Let's continue.",
-  "Noted. Next question coming up.",
-]
-
-const ENCOURAGEMENTS = [
-  "Take your time, there's no rush.",
-  "Think it through, I'm listening.",
-  "Whenever you're ready.",
-]
 
 function randomFrom(arr) { return arr[Math.floor(Math.random() * arr.length)] }
 
@@ -22,8 +13,6 @@ function speak(text, onEnd) {
   window.speechSynthesis.cancel()
   const utt = new SpeechSynthesisUtterance(text)
   utt.rate = 0.95
-  utt.pitch = 1
-  utt.volume = 1
   const voices = window.speechSynthesis.getVoices()
   const preferred = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en')) || voices[0]
   if (preferred) utt.voice = preferred
@@ -39,14 +28,8 @@ function fmtTime(sec) {
   return `${m}:${s}`
 }
 
-function scoreColor(score) {
-  if (score >= 8) return 'var(--green)'
-  if (score >= 6) return 'var(--yellow)'
-  return 'var(--red)'
-}
-
 export default function Interview({ config, profile, onComplete, onSaveSession }) {
-  const { level, topicList, mode, sessionType, totalQ, timeTarget } = config
+  const { level, topicList, mode: initialMode, sessionType, totalQ, timeTarget, interviewType } = config
 
   const [question,  setQuestion]  = useState('')
   const [answer,    setAnswer]    = useState('')
@@ -59,8 +42,8 @@ export default function Interview({ config, profile, onComplete, onSaveSession }
   const [timeLeft,  setTimeLeft]  = useState(timeTarget * 60)
   const [status,    setStatus]    = useState('') 
   const [intro,     setIntro]     = useState(true)
+  const [inputMode, setInputMode] = useState(initialMode || 'text')
 
-  const recognitionRef = useRef(null)
   const timerRef       = useRef(null)
   const historyRef     = useRef([])
 
@@ -79,24 +62,21 @@ export default function Interview({ config, profile, onComplete, onSaveSession }
   }, [])
 
   useEffect(() => {
-    const introText = `Hello ${profile.full_name.split(' ')[0]}, I'm ${INTERVIEWER_NAME}. We'll cover ${topicList} at a ${level.tag} level. Let's begin.`
-    if (mode === 'voice') {
+    const introText = `Hello ${profile.full_name.split(' ')[0]}, I'm ${INTERVIEWER_NAME}. We'll conduct a ${interviewType} session focusing on ${topicList}.`
+    if (inputMode === 'voice') {
       setSpeaking(true)
       speak(introText, () => {
-        setSpeaking(false)
-        setIntro(false)
-        loadQuestion([])
+        setSpeaking(false); setIntro(false); loadQuestion([])
       })
     } else {
-      setIntro(false)
-      loadQuestion([])
+      setIntro(false); loadQuestion([])
     }
     setStatus(introText)
   }, [])
 
   async function loadQuestion(hist) {
     setLoading(true)
-    setStatus('Crafting technical scenario...')
+    setStatus('Processing next technical prompt...')
     try {
       const res = await fetch('/api/interview', {
         method: 'POST',
@@ -107,18 +87,19 @@ export default function Interview({ config, profile, onComplete, onSaveSession }
           level: `${level.label} (${level.tag})`,
           history: hist.map(h => h.question).join(' | ') || 'none',
           count: hist.length + 1,
+          interviewType
         })
       })
       const data = await res.json()
       setQuestion(data.result)
       setStatus('')
       setLoading(false)
-      if (mode === 'voice') {
+      if (inputMode === 'voice') {
         setSpeaking(true)
         speak(data.result, () => setSpeaking(false))
       }
     } catch {
-      setStatus('Connection lost. Retrying...')
+      setStatus('Network interruption.')
       setLoading(false)
     }
   }
@@ -127,17 +108,14 @@ export default function Interview({ config, profile, onComplete, onSaveSession }
     if (!answer.trim()) return
     stopSpeaking()
     setLoading(true)
-    setStatus('Evaluating your response...')
+    setStatus('AI is analyzing your response...')
     try {
       const res = await fetch('/api/interview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'evaluate',
-          topics: topicList,
-          level: `${level.label} (${level.tag})`,
-          question,
-          answer,
+          type: 'evaluate', topics: topicList, level: `${level.label} (${level.tag})`,
+          question, answer, interviewType
         })
       })
       const data = await res.json()
@@ -156,187 +134,115 @@ export default function Interview({ config, profile, onComplete, onSaveSession }
       const newHistory = [...historyRef.current, entry]
       setHistory(newHistory)
       await onSaveSession(newHistory, false)
-
-      if (mode === 'voice') {
-        const short = `Score: ${score}/10. ${score >= 7 ? 'Well said.' : 'Room for improvement.'} ${randomFrom(TRANSITIONS)}`
-        setSpeaking(true)
-        speak(short, () => setSpeaking(false))
-      }
       setLoading(false)
     } catch {
-      setStatus('Error evaluating answer.')
+      setStatus('Error in evaluation.')
       setLoading(false)
-    }
-  }
-
-  async function nextQuestion() {
-    const newIndex = qIndex + 1
-    if (sessionType === 'questions' && newIndex >= totalQ) {
-      handleEndSession()
-      return
-    }
-    setFeedback(null)
-    setAnswer('')
-    setQIndex(newIndex)
-    if (mode === 'voice') {
-      const transition = randomFrom(TRANSITIONS)
-      setSpeaking(true)
-      speak(transition, () => {
-        setSpeaking(false)
-        loadQuestion(historyRef.current)
-      })
-    } else {
-      loadQuestion(historyRef.current)
     }
   }
 
   function handleEndSession() {
     clearInterval(timerRef.current)
     stopSpeaking()
-    if (mode === 'voice') {
-      speak(`Interview complete. Let's analyze your performance.`)
-    }
     onComplete(historyRef.current)
   }
 
-  function startListening() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) return
-    stopSpeaking()
-    const rec = new SR()
-    rec.lang = 'en-US'
-    rec.onresult = e => {
-      setAnswer(e.results[0][0].transcript)
-      setListening(false)
-    }
-    rec.onerror = () => setListening(false)
-    rec.onend   = () => setListening(false)
-    recognitionRef.current = rec
-    rec.start()
-    setListening(true)
-    if (mode === 'voice') speak(randomFrom(ENCOURAGEMENTS))
-  }
-
-  function stopListening() {
-    recognitionRef.current?.stop()
-    setListening(false)
-  }
-
-  const currentScore = feedback ? (feedback.match(/(\d+)\s*\/\s*10/)?.[1] || '?') : null
-
   return (
     <div style={s.page}>
+      {/* Top Navigation */}
       <nav style={s.nav}>
-        <div style={s.container}>
-          <div style={s.navContent}>
-            <div style={s.navLeft}>
-              <div style={s.logo}>DI</div>
-              <span style={s.navStatus}>{status || (intro ? 'Initialising...' : 'Session in Progress')}</span>
+        <div style={s.navContent}>
+          <div style={s.navLeft}>
+            <div style={s.logo}>DI</div>
+            <div>
+              <div style={s.navTitle}>{interviewType.toUpperCase()} SCREEN</div>
+              <div style={s.navSub}>{topicList} · {level.tag}</div>
             </div>
-            <div style={s.navRight}>
-              {sessionType === 'time' ? (
-                <div style={{ ...s.timer, color: timeLeft < 60 ? 'var(--red)' : 'var(--text)' }}>⏱ {fmtTime(timeLeft)}</div>
-              ) : (
-                <div style={s.counter}>Q {qIndex + 1} / {totalQ}</div>
-              )}
-              <button style={s.endBtn} onClick={handleEndSession}>End Interview</button>
+          </div>
+          <div style={s.navRight}>
+            <div style={s.timerBox}>
+              <span style={s.timerLabel}>ELAPSED</span>
+              <span style={s.timerVal}>{fmtTime(timeTarget * 60 - timeLeft)}</span>
             </div>
+            <button style={s.endBtn} onClick={handleEndSession}>END SESSION</button>
           </div>
         </div>
       </nav>
 
-      <main style={s.container}>
+      <main style={s.main}>
         <div style={s.layout}>
-          <div style={s.mainCol}>
-            <div style={s.interviewerCard}>
-              <div style={s.interviewerInfo}>
-                <div style={{ ...s.avatar, ...(speaking ? s.avatarSpeaking : {}) }}>{INTERVIEWER_NAME[0]}</div>
-                <div>
-                  <div style={s.interviewerName}>{INTERVIEWER_NAME}</div>
-                  <div style={s.interviewerRole}>Senior DevOps Interviewer</div>
-                </div>
+          {/* Left: AI Interviewer */}
+          <div style={s.aiSection}>
+            <div style={s.aiCard}>
+              <div style={{ ...s.aiAvatar, boxShadow: speaking ? '0 0 30px var(--primary-glow)' : 'none' }}>
+                <div style={s.aiInitial}>A</div>
+                {speaking && <div style={s.speakingRing} />}
               </div>
-              {speaking && <div style={s.speaking}>● Speaking...</div>}
+              <div style={s.aiInfo}>
+                <h2 style={s.aiName}>{INTERVIEWER_NAME}</h2>
+                <div style={s.aiRole}>Senior DevOps Architect</div>
+              </div>
+              <div style={s.statusBadge}>{status || (speaking ? 'Speaking...' : 'Listening')}</div>
             </div>
 
-            <div style={s.card}>
-              <div style={s.cardLabel}>Question {qIndex + 1}</div>
-              <h2 style={s.questionText}>{loading && !question ? '...' : question}</h2>
+            <div style={s.questionCard}>
+              <div style={s.qLabel}>QUESTION {qIndex + 1}</div>
+              <p style={s.qText}>{loading && !question ? 'Calibrating next scenario...' : question}</p>
             </div>
+          </div>
 
-            {!feedback && !intro && question && (
-              <div style={s.card}>
-                <div style={s.cardLabel}>Your Response</div>
-                
-                {/* Mode Selector */}
-                <div style={s.modeSelector}>
+          {/* Right: User Input */}
+          <div style={s.inputSection}>
+            <div style={s.proCard}>
+              <div style={s.inputHeader}>
+                <h3 style={s.cardTitle}>Your Response</h3>
+                <div style={s.modeToggle}>
                   {['text', 'voice', 'editor'].map(m => (
                     <button key={m} 
-                      style={{ ...s.smallModeBtn, background: mode === m ? 'var(--primary-l)' : 'none', color: mode === m ? 'var(--primary)' : 'var(--muted)' }}
-                      onClick={() => setMode(m)}>
+                      style={{ ...s.modeBtn, background: inputMode === m ? 'var(--primary)' : 'var(--surface-2)', color: inputMode === m ? '#fff' : 'var(--muted)' }}
+                      onClick={() => setInputMode(m)}>
                       {m.toUpperCase()}
                     </button>
                   ))}
                 </div>
-
-                {mode === 'text' && (
-                  <textarea style={s.textarea} value={answer} onChange={e => setAnswer(e.target.value)} placeholder="Explain your approach..." rows={6} />
-                )}
-
-                {mode === 'voice' && (
-                  <div style={s.voiceBox}>
-                    <p style={answer ? s.voiceText : s.voicePlaceholder}>{answer || (listening ? 'Listening...' : 'Press mic to speak')}</p>
-                    <button style={{ ...s.micBtn, background: listening ? 'var(--red)' : 'var(--primary)' }} onClick={listening ? stopListening : startListening}>
-                      {listening ? 'Stop' : 'Speak'}
-                    </button>
-                  </div>
-                )}
-
-                {mode === 'editor' && (
-                  <div style={s.editorWrapper}>
-                    <Editor
-                      value={answer}
-                      onValueChange={code => setAnswer(code)}
-                      highlight={code => highlight(code, languages.yaml)}
-                      padding={20}
-                      style={s.editor}
-                      placeholder="# Write your YAML/IaC here..."
-                    />
-                  </div>
-                )}
-
-                <button style={{ ...s.submitBtn, opacity: !answer.trim() || loading ? 0.5 : 1 }} disabled={!answer.trim() || loading} onClick={submitAnswer}>
-                  {loading ? 'Evaluating...' : 'Submit Response'}
-                </button>
               </div>
-            )}
 
-            {feedback && (
-              <div style={s.feedbackCard}>
-                <div style={s.feedbackHeader}>
-                  <h3 style={s.feedbackTitle}>Alex's Evaluation</h3>
-                  <div style={{ ...s.scoreBadge, background: scoreColor(parseInt(currentScore)) + '15', color: scoreColor(parseInt(currentScore)) }}>{currentScore}/10</div>
+              {inputMode === 'text' && (
+                <textarea style={s.textarea} value={answer} onChange={e => setAnswer(e.target.value)} placeholder="Articulate your approach..." rows={8} />
+              )}
+
+              {inputMode === 'editor' && (
+                <div style={s.editorBox}>
+                  <Editor
+                    value={answer} onValueChange={c => setAnswer(c)}
+                    highlight={c => highlight(c, languages.yaml)}
+                    padding={20} style={s.editor}
+                  />
                 </div>
-                <pre style={s.feedbackText}>{feedback}</pre>
-                <button style={s.nextBtn} onClick={nextQuestion}>
-                  {sessionType === 'questions' && qIndex + 1 >= totalQ ? 'Finish & View Report' : 'Next Question →'}
-                </button>
-              </div>
-            )}
-          </div>
+              )}
 
-          <div style={s.sideCol}>
-            <div style={s.card}>
-              <h3 style={s.sideTitle}>Session Progress</h3>
-              <div style={s.history}>
-                {history.map((h, i) => (
-                  <div key={i} style={s.historyItem}>
-                    <span style={s.historyQ}>Q{i+1}</span>
-                    <span style={{ ...s.historyScore, color: scoreColor(h.score) }}>{h.score}/10</span>
+              {inputMode === 'voice' && (
+                <div style={s.voiceInterface}>
+                  <div style={s.voiceVisualizer}>
+                    {[1,2,3,4,5].map(i => <div key={i} style={{ ...s.vBar, height: listening ? 20 + Math.random()*40 : 4 }} />)}
                   </div>
-                ))}
-                {history.length === 0 && <p style={s.empty}>Waiting for first response...</p>}
-              </div>
+                  <p style={s.voiceHint}>{listening ? 'I am listening...' : 'Click the microphone to speak'}</p>
+                </div>
+              )}
+
+              {feedback ? (
+                <div style={s.feedbackArea}>
+                  <div style={s.fbHeader}>
+                    <span style={s.fbLabel}>EVALUATION COMPLETE</span>
+                    <button style={s.nextBtn} onClick={() => { setFeedback(null); setAnswer(''); setQIndex(i => i + 1); loadQuestion(history) }}>NEXT QUESTION →</button>
+                  </div>
+                  <pre style={s.fbText}>{feedback}</pre>
+                </div>
+              ) : (
+                <button style={{ ...s.submitBtn, opacity: !answer.trim() || loading ? 0.5 : 1 }} disabled={!answer.trim() || loading} onClick={submitAnswer}>
+                  {loading ? 'ANALYZING...' : 'SUBMIT RESPONSE'}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -346,46 +252,53 @@ export default function Interview({ config, profile, onComplete, onSaveSession }
 }
 
 const s = {
-  page: { minHeight: '100vh', background: 'var(--bg)' },
-  container: { maxWidth: 1100, margin: '0 auto', padding: '0 1.5rem' },
-  nav: { background: '#fff', borderBottom: '1px solid var(--border)', padding: '0.75rem 0', position: 'sticky', top: 0, zIndex: 100 },
-  navContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  navLeft: { display: 'flex', alignItems: 'center', gap: '1rem' },
-  logo: { background: 'var(--primary)', color: '#fff', padding: '6px 10px', borderRadius: 8, fontWeight: 800 },
-  navStatus: { fontSize: 13, color: 'var(--muted)', fontWeight: 500 },
-  navRight: { display: 'flex', alignItems: 'center', gap: '1.5rem' },
-  timer: { fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: 15 },
-  counter: { fontSize: 13, fontWeight: 700, color: 'var(--primary)' },
-  endBtn: { background: 'none', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 6, fontSize: 12, color: 'var(--red)' },
-  layout: { display: 'grid', gridTemplateColumns: '1fr 260px', gap: '1.5rem', padding: '2rem 0' },
-  mainCol: { display: 'flex', flexDirection: 'column', gap: '1.25rem' },
-  sideCol: { display: 'flex', flexDirection: 'column', gap: '1.25rem' },
-  interviewerCard: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '1rem 1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' },
-  interviewerInfo: { display: 'flex', alignItems: 'center', gap: '1rem' },
-  avatar: { width: 44, height: 44, background: 'var(--primary)', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18 },
-  avatarSpeaking: { boxShadow: '0 0 0 4px var(--primary-l)' },
-  interviewerName: { fontWeight: 700, fontSize: 15 },
-  interviewerRole: { fontSize: 12, color: 'var(--muted)' },
-  speaking: { fontSize: 12, color: 'var(--primary)', fontWeight: 700 },
-  card: { background: '#fff', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' },
-  cardLabel: { fontSize: 11, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', marginBottom: 12, letterSpacing: '0.05em' },
-  questionText: { fontSize: '1.4rem', fontWeight: 600, lineHeight: 1.5 },
-  textarea: { width: '100%', padding: '1rem', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-2)', outline: 'none', fontSize: 15, lineHeight: 1.6 },
-  submitBtn: { marginTop: '1rem', width: '100%', padding: '12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 },
-  voiceBox: { display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', padding: '1rem', background: 'var(--surface-2)', borderRadius: 10 },
-  voiceText: { fontSize: 15, textAlign: 'center' },
-  voicePlaceholder: { color: 'var(--muted)', fontStyle: 'italic' },
-  micBtn: { padding: '10px 30px', border: 'none', borderRadius: 20, color: '#fff', fontWeight: 700 },
-  feedbackCard: { background: 'var(--green-l)', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1.5px solid var(--green)' },
-  feedbackHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' },
-  feedbackTitle: { fontSize: 16, fontWeight: 800, color: 'var(--text)' },
-  scoreBadge: { padding: '4px 12px', borderRadius: 8, fontWeight: 800, fontSize: 18, fontFamily: 'JetBrains Mono' },
-  feedbackText: { fontSize: 14, whiteSpace: 'pre-wrap', lineHeight: 1.8, color: 'var(--text-2)', fontFamily: 'inherit' },
-  nextBtn: { marginTop: '1.5rem', width: '100%', padding: '12px', background: 'var(--text)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700 },
-  sideTitle: { fontSize: 14, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: '1rem' },
-  history: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
-  historyItem: { display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8 },
-  historyQ: { fontSize: 12, fontWeight: 600 },
-  historyScore: { fontWeight: 800, fontSize: 14, fontFamily: 'JetBrains Mono' },
-  empty: { color: 'var(--muted)', fontSize: 12, textAlign: 'center', padding: '1rem 0' }
+  page: { minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' },
+  nav: { height: 80, borderBottom: '1px solid var(--border)', background: 'var(--surface)', position: 'sticky', top: 0, zIndex: 100 },
+  navContent: { maxWidth: 1400, margin: '0 auto', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem' },
+  navLeft: { display: 'flex', alignItems: 'center', gap: 16 },
+  logo: { width: 36, height: 36, background: 'var(--primary)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900 },
+  navTitle: { fontSize: 12, fontWeight: 800, letterSpacing: '0.1em', color: 'var(--primary)' },
+  navSub: { fontSize: 13, fontWeight: 600, color: 'var(--muted)' },
+  timerBox: { textAlign: 'right' },
+  timerLabel: { fontSize: 9, fontWeight: 900, color: 'var(--muted)', display: 'block' },
+  timerVal: { fontSize: 18, fontWeight: 800, fontFamily: '"JetBrains Mono", monospace' },
+  endBtn: { marginLeft: '2rem', padding: '10px 16px', borderRadius: 8, background: 'var(--red)', color: '#fff', fontSize: 11, fontWeight: 900 },
+  
+  main: { maxWidth: 1400, margin: '0 auto', padding: '3rem 2rem' },
+  layout: { display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '3rem' },
+  
+  aiSection: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+  aiCard: { background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: '2.5rem', border: '1px solid var(--border)', boxShadow: 'var(--shadow-md)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  aiAvatar: { width: 100, height: 100, borderRadius: '50%', background: 'linear-gradient(135deg, #1e293b, #0f172a)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', border: '4px solid var(--surface-2)' },
+  aiInitial: { fontSize: 40, fontWeight: 900, color: 'var(--primary)' },
+  speakingRing: { position: 'absolute', width: '120%', height: '120%', border: '2px solid var(--primary)', borderRadius: '50%', opacity: 0.5, animation: 'float 2s infinite' },
+  aiName: { fontSize: '1.5rem', fontWeight: 900, marginBottom: 4 },
+  aiRole: { fontSize: 13, color: 'var(--muted)', fontWeight: 600 },
+  statusBadge: { marginTop: '1.5rem', padding: '6px 12px', background: 'var(--surface-2)', borderRadius: 20, fontSize: 10, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--primary)' },
+  
+  questionCard: { background: 'linear-gradient(135deg, #2563eb, #1e4ed8)', borderRadius: 'var(--radius-lg)', padding: '2.5rem', color: '#fff', boxShadow: '0 20px 40px var(--primary-glow)' },
+  qLabel: { fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', marginBottom: '1rem', opacity: 0.8 },
+  qText: { fontSize: '1.4rem', fontWeight: 600, lineHeight: 1.5 },
+  
+  inputSection: { display: 'flex', flexDirection: 'column' },
+  proCard: { background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)', padding: '2.5rem', flex: 1, display: 'flex', flexDirection: 'column' },
+  inputHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' },
+  cardTitle: { fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text)' },
+  modeToggle: { display: 'flex', background: 'var(--surface-2)', padding: 4, borderRadius: 10, gap: 4 },
+  modeBtn: { padding: '6px 12px', borderRadius: 8, fontSize: 10, fontWeight: 800 },
+  
+  textarea: { width: '100%', background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)', padding: '1.5rem', fontSize: 16, color: 'var(--text)', outline: 'none', resize: 'none', transition: 'all 0.2s' },
+  editorBox: { background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden', minHeight: 300 },
+  editor: { fontFamily: '"JetBrains Mono", monospace', fontSize: 14 },
+  voiceInterface: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' },
+  voiceVisualizer: { display: 'flex', gap: 6, alignItems: 'center' },
+  vBar: { width: 4, background: 'var(--primary)', borderRadius: 2, transition: 'height 0.1s ease' },
+  voiceHint: { fontSize: 13, color: 'var(--muted)', fontWeight: 600 },
+  
+  submitBtn: { marginTop: '2rem', padding: '16px', background: 'var(--primary)', color: '#fff', borderRadius: 12, fontWeight: 900, fontSize: 14, letterSpacing: '0.1em' },
+  feedbackArea: { marginTop: '2rem', borderTop: '1px solid var(--border)', paddingTop: '2rem' },
+  fbHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
+  fbLabel: { fontSize: 10, fontWeight: 900, color: 'var(--green)', letterSpacing: '0.1em' },
+  nextBtn: { background: 'var(--text)', color: '#fff', padding: '10px 20px', borderRadius: 8, fontSize: 11, fontWeight: 900 },
+  fbText: { fontSize: 14, whiteSpace: 'pre-wrap', lineHeight: 1.8, color: 'var(--text-2)', background: 'var(--surface-2)', padding: '1.5rem', borderRadius: 12, border: '1px solid var(--border)' }
 }

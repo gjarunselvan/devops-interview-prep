@@ -3,7 +3,6 @@ import { supabase } from '../supabase'
 import * as pdfjsLib from 'pdfjs-dist/build/pdf'
 import mammoth from 'mammoth'
 
-// Set worker for PDF.js - Use a more reliable way to find the worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url
@@ -43,175 +42,249 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
     setLoading(false)
   }
 
-  // ... handleFileUpload, handleGenerateRoadmap ...
+  async function handleFileUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setAnalyzing(true)
+    try {
+      let text = ''
+      if (file.type === 'application/pdf') {
+        const arrayBuffer = await file.arrayBuffer()
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+        let fullText = ''
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const content = await page.getTextContent()
+          fullText += content.items.map(item => item.str).join(' ') + '\n'
+        }
+        text = fullText
+      } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const arrayBuffer = await file.arrayBuffer()
+        const result = await mammoth.extractRawText({ arrayBuffer })
+        text = result.value
+      } else {
+        alert('PDF or DOCX only.')
+        setAnalyzing(false)
+        return
+      }
+      if (!text.trim()) throw new Error('Empty file.')
+      const res = await fetch('/api/analyze-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resumeText: text })
+      })
+      const data = await res.json()
+      if (data.result) {
+        const { summary, skills, recommendedTopics, experienceLevel, suggestedCourses } = data.result
+        await supabase.from('profiles').update({
+          resume_text: text, suggested_skills: skills, experience_level: experienceLevel,
+          metadata: { summary, recommendedTopics, suggestedCourses }
+        }).eq('id', profile.id)
+        alert('Analysis complete!')
+        window.location.reload()
+      }
+    } catch (err) {
+      alert(`Error: ${err.message}`)
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
+  async function handleGenerateRoadmap() {
+    setGenerating(true)
+    try {
+      const res = await fetch('/api/roadmap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile, recentSessions: sessions.slice(0, 3), studyTimePref: profile.study_daily_mins || 60 })
+      })
+      const data = await res.json()
+      if (data.result) {
+        await supabase.from('roadmaps').insert({ user_id: profile.id, content: data.result })
+        setRoadmap(data.result)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   const avgScore = sessions.length > 0 
     ? (sessions.reduce((acc, s) => acc + (s.avg_score || 0), 0) / sessions.length).toFixed(1)
     : '0.0'
 
-  // Map improvement points with metadata
   const improveHistory = sessions.flatMap(s => 
     (s.improve_points || []).map(p => ({
-      text: p,
-      date: new Date(s.created_at).toLocaleDateString(),
-      sessionId: s.id,
-      sessionData: s
+      text: p, date: new Date(s.created_at).toLocaleDateString(), sessionData: s
     }))
-  ).slice(0, 10)
+  ).slice(0, 8)
 
   const suggestedCourses = profile?.metadata?.suggestedCourses || []
 
-  if (loading) return <div style={s.loading}>Loading Dashboard...</div>
+  if (loading) return <div style={s.loading}>Initializing Dashboard...</div>
 
   return (
     <div style={s.page}>
-      <nav style={s.nav}>
-        <div style={s.container}>
-          <div style={s.navContent}>
-            <div style={s.logo}>DI</div>
-            <div style={s.navActions}>
-              <span style={s.userName}>{profile.full_name}</span>
-              <button style={s.logoutBtn} onClick={onLogout}>Sign Out</button>
+      {/* Sidebar Navigation */}
+      <aside style={s.sidebar}>
+        <div style={s.sidebarHeader}>
+          <div style={s.logoSmall}>DI</div>
+          <span style={s.logoText}>DevOps Prep</span>
+        </div>
+
+        <div style={s.sidebarNav}>
+          <button style={{ ...s.navItem, ...s.navItemActive }}>
+            <span style={s.navIcon}>📊</span> Dashboard
+          </button>
+          <button style={s.navItem} onClick={onStartSession}>
+            <span style={s.navIcon}>🚀</span> New Interview
+          </button>
+        </div>
+
+        <div style={s.sidebarPersonalization}>
+          <div style={s.sidebarLabel}>Personalization</div>
+          <div style={s.themePicker}>
+            <button style={s.themeIcon} onClick={() => onPersonalize('light', bgColor)}>☀️</button>
+            <button style={s.themeIcon} onClick={() => onPersonalize('dark', bgColor)}>🌙</button>
+            <button style={s.themeIcon} onClick={() => onPersonalize('oled', bgColor)}>📱</button>
+          </div>
+          <input type="color" value={bgColor || '#f8fafc'} onChange={e => onPersonalize(theme, e.target.value)} style={s.miniColor} title="Custom Background" />
+        </div>
+
+        <div style={s.sidebarFooter}>
+          <div style={s.userMini}>
+            <div style={s.userAvatar}>{profile.full_name[0]}</div>
+            <div style={s.userInfo}>
+              <div style={s.userName}>{profile.full_name.split(' ')[0]}</div>
+              <div style={s.userLevel}>Level {profile.level || 1}</div>
             </div>
           </div>
+          <button style={s.logoutBtn} onClick={onLogout}>Sign Out</button>
         </div>
-      </nav>
+      </aside>
 
-      <main style={s.container}>
-        <div style={s.hero}>
-          <h1 style={s.greeting}>Welcome back, <span style={s.accent}>{profile.full_name.split(' ')[0]}</span></h1>
-          <p style={s.subtext}>Track your progress and level up your DevOps career.</p>
-        </div>
+      {/* Main Content Area */}
+      <main style={s.main}>
+        <header style={s.topHeader}>
+          <div>
+            <h1 style={s.mainTitle}>Dashboard Overview</h1>
+            <p style={s.mainSubtitle}>Track your metrics and learning progression.</p>
+          </div>
+          <button style={s.primaryBtn} onClick={onStartSession}>
+            Start New Session
+          </button>
+        </header>
 
-        <div style={s.grid}>
-          {/* Left: Progress & Roadmap */}
-          <div style={s.leftCol}>
+        <div style={s.contentGrid}>
+          {/* Top Row: Metrics & Gamification */}
+          <div style={s.proCard}>
+            <div style={s.cardHeader}>
+              <h3 style={s.cardTitle}>Performance</h3>
+              <span style={s.cardBadge}>LIVE</span>
+            </div>
             <div style={s.statsRow}>
-              <div style={s.statCard}>
+              <div style={s.statBox}>
+                <div style={s.statValue}>{avgScore}</div>
                 <div style={s.statLabel}>Avg Score</div>
-                <div style={s.statValue}>{avgScore}<span style={s.statTotal}>/10</span></div>
               </div>
-              <div style={s.statCard}>
-                <div style={s.statLabel}>Level {profile.level || 1}</div>
-                <div style={s.statValue}>{profile.xp || 0}<span style={s.statTotal}> XP</span></div>
-                <div style={s.xpBar}><div style={{ ...s.xpFill, width: `${((profile.xp || 0) % 500) / 5}%` }} /></div>
+              <div style={s.statDivider} />
+              <div style={s.statBox}>
+                <div style={s.statValue}>{sessions.length}</div>
+                <div style={s.statLabel}>Sessions</div>
               </div>
-              <div style={s.statCard}>
-                <div style={s.statLabel}>Day Streak</div>
-                <div style={s.statValue}>🔥 {profile.streak || 1}</div>
+            </div>
+          </div>
+
+          <div style={{ ...s.proCard, background: 'linear-gradient(135deg, #1e293b, #0f172a)', color: '#fff' }}>
+            <div style={s.cardHeader}>
+              <h3 style={{ ...s.cardTitle, color: '#fff' }}>Career Rank</h3>
+              <div style={s.streakBadge}>🔥 {profile.streak || 1} DAY STREAK</div>
+            </div>
+            <div style={s.rankInfo}>
+              <div style={s.rankLabel}>CURRENT LEVEL: <span style={s.rankVal}>{profile.level || 1}</span></div>
+              <div style={s.rankLabel}>EXPERIENCE: <span style={s.rankVal}>{profile.xp || 0} XP</span></div>
+              <div style={s.xpBarFull}>
+                <div style={{ ...s.xpBarFill, width: `${((profile.xp || 0) % 500) / 5}%` }} />
               </div>
-              <button style={s.startBtn} onClick={onStartSession}>
-                New Interview →
+            </div>
+          </div>
+
+          {/* Middle Row: Roadmap */}
+          <div style={{ ...s.proCard, gridColumn: 'span 2' }}>
+            <div style={s.cardHeader}>
+              <h3 style={s.cardTitle}>Technical Roadmap</h3>
+              <button style={s.ghostBtn} onClick={handleGenerateRoadmap} disabled={generating}>
+                {generating ? 'Regenerating...' : 'Refresh Plan'}
               </button>
             </div>
-
-            <div style={s.card}>
-              <h3 style={s.cardTitle}>Your Study Roadmap</h3>
-              {roadmap ? (
-                <div style={s.roadmap}>
-                  <div style={s.roadmapFocus}><strong>Week's Focus:</strong> {roadmap.focus}</div>
-                  <div style={s.dayGrid}>
-                    {roadmap.days.map((d, i) => (
-                      <div key={i} style={s.dayCard}>
-                        <div style={s.dayName}>{d.day}</div>
-                        <ul style={s.taskList}>
-                          {d.tasks.map((t, ti) => (
-                            <li key={ti} style={s.task}>
-                              <div style={s.taskInfo}>
-                                <div style={s.taskTitle}>{t.title} <span style={s.taskDur}>({t.duration})</span></div>
-                                {t.resourceLink && (
-                                  <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.resourceLink}>
-                                    View Resource ↗
-                                  </a>
-                                )}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
+            {roadmap ? (
+              <div style={s.roadmapScroll}>
+                {roadmap.days.map((d, i) => (
+                  <div key={i} style={s.roadmapDay}>
+                    <div style={s.dayTitle}>{d.day}</div>
+                    {d.tasks.map((t, ti) => (
+                      <div key={ti} style={s.taskItem}>
+                        <div style={s.taskCircle} />
+                        <div style={s.taskDetails}>
+                          <div style={s.taskName}>{t.title}</div>
+                          <div style={s.taskMeta}>
+                            <span style={s.taskDur}>{t.duration}</span>
+                            {t.resourceLink && (
+                              <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.taskLink}>Resources →</a>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              ) : (
-                <div style={s.emptyRoadmap}>
-                  <p>No roadmap generated yet.</p>
-                  <button style={s.genBtn} onClick={handleGenerateRoadmap} disabled={generating}>
-                    {generating ? 'Generating...' : 'Generate Personalized Roadmap'}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {suggestedCourses.length > 0 && (
-              <div style={s.card}>
-                <h3 style={s.cardTitle}>🎓 Recommended Learning</h3>
-                <div style={s.courseList}>
-                  {suggestedCourses.map((c, i) => (
-                    <div key={i} style={s.courseItem}>
-                      <span style={s.courseIcon}>📚</span>
-                      <span style={s.courseText}>{c}</span>
-                    </div>
-                  ))}
-                </div>
+                ))}
+              </div>
+            ) : (
+              <div style={s.emptyState}>
+                <p>No roadmap found. Complete a session or analysis to build one.</p>
               </div>
             )}
+          </div>
 
-            <div style={s.card}>
-              <h3 style={s.cardTitle}>Improvement Areas</h3>
-              <div style={s.improveListV2}>
-                {improveHistory.length > 0 ? improveHistory.map((item, i) => (
-                  <div key={i} style={s.improveItemV2} onClick={() => onViewReport(item.sessionData)}>
+          {/* Bottom Row: Improvement & Resume */}
+          <div style={s.proCard}>
+            <div style={s.cardHeader}>
+              <h3 style={s.cardTitle}>Focus Areas</h3>
+            </div>
+            <div style={s.improveList}>
+              {improveHistory.length > 0 ? improveHistory.map((item, i) => (
+                <div key={i} style={s.improveItem} onClick={() => onViewReport(item.sessionData)}>
+                  <div style={s.improveInfo}>
                     <div style={s.improveText}>{item.text}</div>
                     <div style={s.improveDate}>{item.date}</div>
                   </div>
-                )) : <p style={s.emptyText}>Complete sessions to see suggestions.</p>}
-              </div>
+                  <span style={s.improveIcon}>→</span>
+                </div>
+              )) : <div style={s.emptyState}>No data yet.</div>}
             </div>
           </div>
 
-          {/* Right: Resume & History */}
-          <div style={s.rightCol}>
-            <div style={s.card}>
+          <div style={s.proCard}>
+            <div style={s.cardHeader}>
               <h3 style={s.cardTitle}>Resume Analysis</h3>
-              <p style={s.cardDesc}>Upload PDF/DOCX to get tailored interview topics.</p>
-              <div style={s.uploadZone}>
-                <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} style={s.fileInput} id="resume-upload" />
-                <label htmlFor="resume-upload" style={s.uploadLabel}>
-                  {analyzing ? '⏳ Analyzing...' : '📁 Drop or Click to Upload'}
-                </label>
-              </div>
             </div>
-
-            <div style={s.card}>
-              <h3 style={s.cardTitle}>Personalization</h3>
-              <div style={s.themeRow}>
-                <button style={{ ...s.themeBtn, background: theme === 'light' ? 'var(--primary-l)' : 'var(--surface-2)' }} onClick={() => onPersonalize('light', bgColor)}>☀️ Light</button>
-                <button style={{ ...s.themeBtn, background: theme === 'dark' ? 'var(--primary-l)' : 'var(--surface-2)' }} onClick={() => onPersonalize('dark', bgColor)}>🌙 Dark</button>
-                <button style={{ ...s.themeBtn, background: theme === 'oled' ? 'var(--primary-l)' : 'var(--surface-2)' }} onClick={() => onPersonalize('oled', bgColor)}>📱 OLED</button>
-              </div>
-              <div style={s.colorRow}>
-                <span style={s.colorLabel}>Custom Background:</span>
-                <input type="color" value={bgColor || '#f8fafc'} onChange={e => onPersonalize(theme, e.target.value)} style={s.colorPicker} />
-                {bgColor && <button style={s.resetBtn} onClick={() => onPersonalize(theme, '')}>Reset</button>}
-              </div>
+            <div style={s.dropzone}>
+              <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} style={s.fileInput} id="res-up" />
+              <label htmlFor="res-up" style={s.dropLabel}>
+                <span style={s.dropIcon}>{analyzing ? '⏳' : '📁'}</span>
+                <div style={s.dropText}>{analyzing ? 'Analyzing Profile...' : 'Drag or Click to Upload'}</div>
+                <div style={s.dropSub}>PDF or DOCX files supported</div>
+              </label>
             </div>
-
-            <div style={s.card}>
-              <h3 style={s.cardTitle}>Recent Sessions</h3>
-              <div style={s.sessionList}>
-                {sessions.length > 0 ? sessions.slice(0, 5).map(s => (
-                  <div key={s.id} style={s.sessionItem}>
-                    <div style={s.sessionInfo}>
-                      <div style={s.sessionDate}>{new Date(s.created_at).toLocaleDateString()}</div>
-                      <div style={s.sessionTopics}>{s.level} · {s.topics}</div>
-                    </div>
-                    <div style={{ ...s.sessionScore, color: s.avg_score >= 8 ? 'var(--green)' : 'var(--yellow)' }}>
-                      {s.avg_score?.toFixed(1)}
-                    </div>
-                  </div>
-                )) : <p style={s.emptyText}>No sessions recorded yet.</p>}
+            {suggestedCourses.length > 0 && (
+              <div style={s.coursePreview}>
+                <div style={s.courseLabel}>RECOMENDED TOPICS</div>
+                <div style={s.courseTags}>
+                  {suggestedCourses.slice(0, 3).map((c, i) => <span key={i} style={s.courseTag}>{c}</span>)}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </main>
@@ -220,67 +293,83 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 }
 
 const s = {
-  page: { minHeight: '100vh', background: 'var(--bg)' },
-  loading: { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' },
-  container: { maxWidth: 1200, margin: '0 auto', padding: '0 1.5rem' },
-  nav: { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0.75rem 0', sticky: 'top', zIndex: 10 },
-  navContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  logo: { background: 'var(--primary)', color: '#fff', padding: '8px 12px', borderRadius: 8, fontWeight: 800, fontSize: 18 },
-  navActions: { display: 'flex', alignItems: 'center', gap: '1rem' },
-  userName: { fontWeight: 500, fontSize: 14, color: 'var(--text-2)' },
-  logoutBtn: { background: 'none', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8, fontSize: 13, color: 'var(--muted)' },
-  hero: { padding: '3rem 0 2rem' },
-  greeting: { fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem' },
-  accent: { color: 'var(--primary)' },
-  subtext: { color: 'var(--muted)', fontSize: '1.1rem' },
-  grid: { display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem' },
-  leftCol: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-  rightCol: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-  statsRow: { display: 'flex', gap: '1rem', alignItems: 'stretch' },
-  statCard: { flex: 1, background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', justifyContent: 'center' },
-  statLabel: { fontSize: 12, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 },
-  statValue: { fontSize: 24, fontWeight: 800, color: 'var(--text)' },
-  statTotal: { fontSize: 14, color: 'var(--muted)', fontWeight: 400 },
-  xpBar: { height: 6, background: 'var(--surface-2)', borderRadius: 3, marginTop: 8, overflow: 'hidden' },
-  xpFill: { height: '100%', background: 'var(--primary)', transition: 'width 0.4s ease' },
-  startBtn: { flex: 1.5, background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius)', fontSize: 16, fontWeight: 700, padding: '1rem' },
-  card: { background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' },
-  cardTitle: { fontSize: 18, fontWeight: 700, marginBottom: '1rem' },
-  cardDesc: { fontSize: 13, color: 'var(--muted)', marginBottom: '1rem' },
-  uploadZone: { border: '2px dashed var(--border)', borderRadius: 12, padding: '2rem', textAlign: 'center', cursor: 'pointer', background: 'var(--surface-2)', transition: 'all 0.2s' },
+  page: { minHeight: '100vh', background: 'var(--bg)', display: 'flex' },
+  sidebar: { width: 'var(--sidebar-w)', background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '1.5rem', position: 'fixed', height: '100vh', zIndex: 100 },
+  sidebarHeader: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: '2.5rem' },
+  logoSmall: { width: 32, height: 32, background: 'var(--primary)', color: '#fff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 },
+  logoText: { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.01em' },
+  sidebarNav: { display: 'flex', flexDirection: 'column', gap: 6, flex: 1 },
+  navItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, fontSize: 14, fontWeight: 600, color: 'var(--muted)', background: 'none', textAlign: 'left' },
+  navItemActive: { background: 'var(--primary-l)', color: 'var(--primary)' },
+  navIcon: { fontSize: 16 },
+  sidebarPersonalization: { padding: '1.5rem 0', borderTop: '1px solid var(--border)', marginBottom: '1.5rem' },
+  sidebarLabel: { fontSize: 10, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12, letterSpacing: '0.05em' },
+  themePicker: { display: 'flex', gap: 8, marginBottom: 12 },
+  themeIcon: { width: 30, height: 30, borderRadius: 8, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 },
+  miniColor: { width: '100%', height: 24, border: 'none', borderRadius: 6, padding: 0, cursor: 'pointer' },
+  sidebarFooter: { borderTop: '1px solid var(--border)', paddingTop: '1.5rem' },
+  userMini: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1rem' },
+  userAvatar: { width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 },
+  userInfo: { flex: 1 },
+  userName: { fontSize: 14, fontWeight: 700, color: 'var(--text)' },
+  userLevel: { fontSize: 11, color: 'var(--primary)', fontWeight: 700 },
+  logoutBtn: { width: '100%', padding: '8px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: 'var(--surface-2)', color: 'var(--red)' },
+  
+  main: { flex: 1, marginLeft: 'var(--sidebar-w)', padding: '2.5rem 3.5rem' },
+  topHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' },
+  mainTitle: { fontSize: '1.75rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em' },
+  mainSubtitle: { fontSize: '0.95rem', color: 'var(--muted)', fontWeight: 500 },
+  primaryBtn: { background: 'var(--primary)', color: '#fff', padding: '12px 20px', borderRadius: 12, fontWeight: 700, fontSize: 14, boxShadow: '0 4px 12px var(--primary-glow)' },
+  
+  contentGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' },
+  proCard: { background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', padding: '1.5rem', display: 'flex', flexDirection: 'column' },
+  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
+  cardTitle: { fontSize: 14, fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.02em' },
+  cardBadge: { fontSize: 10, fontWeight: 800, color: 'var(--green)', background: 'rgba(16, 185, 129, 0.1)', padding: '4px 8px', borderRadius: 6 },
+  
+  statsRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '1rem 0' },
+  statBox: { textAlign: 'center' },
+  statValue: { fontSize: '2.5rem', fontWeight: 900, color: 'var(--text)', fontFamily: '"JetBrains Mono", monospace' },
+  statLabel: { fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginTop: 4 },
+  statDivider: { width: 1, height: 40, background: 'var(--border-2)' },
+  
+  streakBadge: { fontSize: 10, fontWeight: 900, background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', padding: '4px 10px', borderRadius: 30 },
+  rankInfo: { marginTop: '0.5rem' },
+  rankLabel: { fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginBottom: 4 },
+  rankVal: { color: '#fff', fontWeight: 900 },
+  xpBarFull: { height: 8, background: 'rgba(255,255,255,0.1)', borderRadius: 4, marginTop: 12, overflow: 'hidden' },
+  xpBarFill: { height: '100%', background: 'var(--primary)', boxShadow: '0 0 10px var(--primary)' },
+  
+  roadmapScroll: { display: 'flex', gap: '1.5rem', overflowX: 'auto', paddingBottom: '1rem', paddingRight: '1rem' },
+  roadmapDay: { minWidth: 200, flexShrink: 0 },
+  dayTitle: { fontSize: 12, fontWeight: 800, color: 'var(--primary)', marginBottom: '1rem', textTransform: 'uppercase' },
+  taskItem: { display: 'flex', gap: 12, marginBottom: '1.25rem' },
+  taskCircle: { width: 10, height: 10, borderRadius: '50%', border: '2px solid var(--primary)', marginTop: 4, flexShrink: 0 },
+  taskDetails: { flex: 1 },
+  taskName: { fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 },
+  taskMeta: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  taskDur: { fontSize: 11, color: 'var(--muted)', fontWeight: 500 },
+  taskLink: { fontSize: 11, color: 'var(--primary)', fontWeight: 700 },
+  
+  improveList: { display: 'flex', flexDirection: 'column', gap: 10 },
+  improveItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s' },
+  improveInfo: { flex: 1 },
+  improveText: { fontSize: 13, fontWeight: 700, color: 'var(--text-2)', marginBottom: 4 },
+  improveDate: { fontSize: 10, color: 'var(--muted)', fontWeight: 600 },
+  improveIcon: { fontSize: 14, color: 'var(--primary)', fontWeight: 900 },
+  
+  dropzone: { border: '2px dashed var(--border-2)', borderRadius: 16, padding: '2rem', textAlign: 'center', cursor: 'pointer', background: 'var(--surface-2)', transition: 'all 0.2s' },
   fileInput: { display: 'none' },
-  uploadLabel: { cursor: 'pointer', fontWeight: 600, color: 'var(--text-2)' },
-  themeRow: { display: 'flex', gap: 8, marginBottom: '1.5rem' },
-  themeBtn: { flex: 1, padding: '8px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, fontWeight: 600 },
-  colorRow: { display: 'flex', alignItems: 'center', gap: 12 },
-  colorLabel: { fontSize: 13, color: 'var(--muted)' },
-  colorPicker: { width: 40, height: 30, border: 'none', borderRadius: 4, padding: 0, cursor: 'pointer' },
-  resetBtn: { fontSize: 12, color: 'var(--primary)', background: 'none', border: 'none', fontWeight: 600 },
-  roadmap: { background: 'var(--primary-l)', padding: '1.5rem', borderRadius: 12, border: '1px solid var(--primary)' },
-  roadmapFocus: { fontSize: 15, marginBottom: '1.5rem', color: 'var(--primary)', fontWeight: 700 },
-  dayGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' },
-  dayCard: { background: 'var(--surface)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border)', boxShadow: 'var(--shadow)' },
-  dayName: { fontWeight: 800, fontSize: 13, marginBottom: 8, color: 'var(--primary)', textTransform: 'uppercase' },
-  taskList: { listStyle: 'none', fontSize: 12, color: 'var(--text-2)' },
-  task: { marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 6, borderLeft: '2px solid var(--primary-l)', paddingLeft: 8 },
-  taskInfo: { display: 'flex', flexDirection: 'column', gap: 4 },
-  taskTitle: { fontWeight: 600, fontSize: 12 },
-  taskDur: { color: 'var(--muted)', fontWeight: 400, fontSize: 11 },
-  resourceLink: { fontSize: 10, color: 'var(--primary)', fontWeight: 700, textDecoration: 'none', textTransform: 'uppercase' },
-  courseList: { display: 'flex', flexDirection: 'column', gap: 10 },
-  courseItem: { display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface-2)', padding: '10px 14px', borderRadius: 8 },
-  courseText: { fontSize: 14, fontWeight: 500 },
-  improveListV2: { display: 'flex', flexDirection: 'column', gap: 10 },
-  improveItemV2: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--surface-2)', borderRadius: 10, cursor: 'pointer', transition: 'all 0.2s', border: '1px solid transparent' },
-  improveText: { fontSize: 14, fontWeight: 600, color: 'var(--text-2)' },
-  improveDate: { fontSize: 11, color: 'var(--muted)', fontWeight: 500 },
-  tagCloud: { display: 'flex', flexWrap: 'wrap', gap: 8 },
-  tag: { background: 'var(--secondary-l)', color: 'var(--secondary)', padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 },
-  sessionList: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
-  sessionItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' },
-  sessionInfo: { display: 'flex', flexDirection: 'column' },
-  sessionDate: { fontSize: 12, color: 'var(--muted)' },
-  sessionTopics: { fontSize: 13, fontWeight: 500 },
-  sessionScore: { fontWeight: 800, fontSize: 18, fontFamily: 'JetBrains Mono' },
-  emptyText: { color: 'var(--muted)', fontSize: 13, textAlign: 'center' }
+  dropLabel: { cursor: 'pointer' },
+  dropIcon: { fontSize: '2rem', marginBottom: 12, display: 'block' },
+  dropText: { fontSize: 14, fontWeight: 700, color: 'var(--text)' },
+  dropSub: { fontSize: 11, color: 'var(--muted)', marginTop: 4 },
+  coursePreview: { marginTop: '1.5rem' },
+  courseLabel: { fontSize: 10, fontWeight: 800, color: 'var(--muted)', marginBottom: 8 },
+  courseTags: { display: 'flex', gap: 8 },
+  courseTag: { fontSize: 10, fontWeight: 700, background: 'var(--primary-l)', color: 'var(--primary)', padding: '4px 10px', borderRadius: 20 },
+  
+  loading: { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--muted)', fontSize: 14, fontWeight: 600 },
+  ghostBtn: { background: 'none', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, color: 'var(--muted)' },
+  emptyState: { padding: '2rem', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }
 }

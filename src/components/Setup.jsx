@@ -1,88 +1,50 @@
 import { useState, useEffect } from 'react'
 
 const LEVELS = [
-  { id: '0-1', label: '0–1 years', tag: 'Fresher',             color: '#10b981' },
-  { id: '1-3', label: '1–3 years', tag: 'Junior',              color: '#2563eb' },
-  { id: '3-5', label: '3–5 years', tag: 'Mid Level',           color: '#f59e0b' },
-  { id: '5-8', label: '5–8 years', tag: 'Senior',              color: '#ef4444' },
-  { id: '8+',  label: '8+ years',  tag: 'Architect',           color: '#7c3aed' },
+  { id: '0-1', label: '0–1y', tag: 'Fresher',    color: '#10b981' },
+  { id: '1-3', label: '1–3y', tag: 'Junior',     color: '#2563eb' },
+  { id: '3-5', label: '3–5y', tag: 'Mid Level',  color: '#f59e0b' },
+  { id: '5-8', label: '5–8y', tag: 'Senior',     color: '#ef4444' },
+  { id: '8+',  label: '8y+',  tag: 'Architect',  color: '#7c3aed' },
 ]
 
 const TOPIC_GROUPS = [
   {
-    name: 'Cloud Platforms',
+    name: 'Cloud & Infrastructure',
     topics: [
       { id: 'aws', label: 'AWS', icon: '☁️' },
       { id: 'gcp', label: 'GCP', icon: '🔵' },
       { id: 'azure', label: 'Azure', icon: '🟦' },
-    ]
-  },
-  {
-    name: 'Containers & Orchestration',
-    topics: [
-      { id: 'kubernetes', label: 'Kubernetes', icon: '☸️' },
-      { id: 'docker', label: 'Docker', icon: '🐳' },
-      { id: 'helm', label: 'Helm', icon: '⛵' },
-      { id: 'argocd', label: 'Argo CD', icon: '🤖' },
-    ]
-  },
-  {
-    name: 'Infrastructure & Config',
-    topics: [
       { id: 'terraform', label: 'Terraform', icon: '🏗️' },
       { id: 'ansible', label: 'Ansible', icon: '⚙️' },
-      { id: 'linux', label: 'Linux', icon: '🐧' },
     ]
   },
   {
-    name: 'CI/CD & Development',
+    name: 'Containers & Dev',
     topics: [
+      { id: 'kubernetes', label: 'K8s', icon: '☸️' },
+      { id: 'docker', label: 'Docker', icon: '🐳' },
       { id: 'cicd', label: 'CI/CD', icon: '🔄' },
-      { id: 'jenkins', label: 'Jenkins', icon: '🏺' },
       { id: 'git', label: 'Git', icon: '🌿' },
-    ]
-  },
-  {
-    name: 'Observability & Security',
-    topics: [
-      { id: 'monitoring', label: 'Monitoring', icon: '📊' },
-      { id: 'prometheus', label: 'Prometheus', icon: '🔥' },
-      { id: 'elk', label: 'ELK Stack', icon: '📋' },
-      { id: 'security', label: 'DevSecOps', icon: '🔐' },
-      { id: 'vault', label: 'Vault', icon: '🔑' },
     ]
   }
 ]
-
-const Q_OPTIONS   = [5, 10, 15, 20]
-const TIME_OPTIONS = [15, 30, 45, 60]
 
 export default function Setup({ profile, onStart, onLogout, onGoBack }) {
   const [level,       setLevel]       = useState(null)
   const [topics,      setTopics]      = useState([])
   const [mode,        setMode]        = useState('text')
-  const [type,        setType]        = useState('technical') // technical or behavioral
-  const [sessionType, setSessionType] = useState('questions')
+  const [type,        setType]        = useState('technical')
   const [qTarget,     setQTarget]     = useState(10)
-  const [timeTarget,  setTimeTarget]  = useState(30)
   const [studyTime,   setStudyTime]   = useState(profile?.study_daily_mins || 60)
-  const [customQ,     setCustomQ]     = useState('')
-  const [customT,     setCustomT]     = useState('')
 
-  // Pre-fill topics from profile recommendations
   useEffect(() => {
     const recommended = profile?.metadata?.recommendedTopics || []
     const initialTopics = []
     TOPIC_GROUPS.forEach(group => {
-      group.topics.forEach(t => {
-        if (recommended.includes(t.id)) {
-          initialTopics.push(t)
-        }
-      })
+      group.topics.forEach(t => { if (recommended.includes(t.id)) initialTopics.push(t) })
     })
     if (initialTopics.length > 0) setTopics(initialTopics)
-    
-    // Also pre-fill level if available
     if (profile?.experience_level) {
       const foundLevel = LEVELS.find(l => l.tag === profile.experience_level || l.id === profile.experience_level)
       if (foundLevel) setLevel(foundLevel)
@@ -94,77 +56,60 @@ export default function Setup({ profile, onStart, onLogout, onGoBack }) {
   }
 
   const topicList = topics.map(t => t.label).join(', ')
-  const finalQ    = sessionType === 'questions' ? (parseInt(customQ) || qTarget) : null
-  const finalT    = sessionType === 'time' ? (parseInt(customT) || timeTarget) : null
   const canStart  = level && (type === 'behavioral' || topics.length > 0)
-
-  function handleStart() {
-    if (!canStart) return
-    onStart({ level, topics: type === 'behavioral' ? [] : topics, topicList: type === 'behavioral' ? 'Behavioral & Culture' : topicList, mode, sessionType, totalQ: finalQ, timeTarget: finalT, studyTime, interviewType: type })
-  }
 
   return (
     <div style={s.page}>
-      <nav style={s.nav}>
-        <div style={s.container}>
-          <div style={s.navContent}>
-            <div style={s.navLeft}>
-              <button style={s.backBtn} onClick={onGoBack}>← Dashboard</button>
-              <span style={s.navTitle}>Interview Setup</span>
-            </div>
-            <div style={s.navRight}>
-              <span style={s.navName}>{profile.full_name}</span>
-              <button style={s.logoutBtn} onClick={onLogout}>Sign out</button>
-            </div>
-          </div>
+      {/* Sidebar - Reusing styles from Dashboard */}
+      <aside style={s.sidebar}>
+        <div style={s.sidebarHeader}>
+          <div style={s.logoSmall}>DI</div>
+          <span style={s.logoText}>DevOps Prep</span>
         </div>
-      </nav>
+        <div style={s.sidebarNav}>
+          <button style={s.navItem} onClick={onGoBack}><span style={s.navIcon}>📊</span> Dashboard</button>
+          <button style={{ ...s.navItem, ...s.navItemActive }}><span style={s.navIcon}>🚀</span> New Interview</button>
+        </div>
+        <div style={s.sidebarFooter}>
+          <button style={s.backBtn} onClick={onGoBack}>← Back to Home</button>
+        </div>
+      </aside>
 
-      <main style={s.container}>
-        <div style={s.hero}>
-          <h2 style={s.heroTitle}>Customize your <span style={s.accent}>Session</span></h2>
-          <p style={s.heroSub}>Choose your target tech stack and experience level.</p>
-        </div>
+      <main style={s.main}>
+        <header style={s.topHeader}>
+          <div>
+            <h1 style={s.mainTitle}>Session Configuration</h1>
+            <p style={s.mainSubtitle}>Tailor the AI behavior to your preparation goals.</p>
+          </div>
+          <button style={{ ...s.primaryBtn, opacity: canStart ? 1 : 0.5 }} disabled={!canStart} onClick={() => onStart({ level, topics, topicList, mode, sessionType: 'questions', totalQ: qTarget, studyTime, interviewType: type })}>
+            Launch Interview
+          </button>
+        </header>
 
         <div style={s.grid}>
-          {/* Main Config */}
-          <div style={s.mainCol}>
-            {/* Interview Type */}
-            <div style={s.card}>
-              <h3 style={s.cardTitle}>0. Interview Focus</h3>
+          {/* Section 1: Focus & Level */}
+          <div style={s.section}>
+            <div style={s.proCard}>
+              <h3 style={s.cardTitle}>Interview Track</h3>
               <div style={s.typeGrid}>
                 {[
-                  { id: 'technical', icon: '💻', title: 'Technical Screen', desc: 'Focus on tools, syntax, and architecture' },
-                  { id: 'behavioral', icon: '🤝', title: 'Behavioral & Culture', desc: 'Focus on SRE principles, STAR method, and leadership' }
+                  { id: 'technical', icon: '💻', title: 'Technical', desc: 'Tools & Architecture' },
+                  { id: 'behavioral', icon: '🤝', title: 'Behavioral', desc: 'SRE & Leadership' }
                 ].map(it => (
-                  <button key={it.id}
-                    style={{ 
-                      ...s.typeBtn, 
-                      borderColor: type === it.id ? 'var(--primary)' : 'var(--border)', 
-                      background: type === it.id ? 'var(--primary-l)' : 'var(--surface)',
-                      color: type === it.id ? 'var(--primary)' : 'var(--text)'
-                    }}
+                  <button key={it.id} 
+                    style={{ ...s.typeBtn, borderColor: type === it.id ? 'var(--primary)' : 'var(--border)', background: type === it.id ? 'var(--primary-l)' : 'var(--surface)' }}
                     onClick={() => setType(it.id)}>
-                    <span style={{ fontSize: 24, marginBottom: 8 }}>{it.icon}</span>
-                    <span style={{ fontWeight: 700, fontSize: 15 }}>{it.title}</span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{it.desc}</span>
+                    <span style={s.typeIcon}>{it.icon}</span>
+                    <div style={s.typeTitle}>{it.title}</div>
                   </button>
                 ))}
               </div>
-            </div>
 
-            {/* Experience Level */}
-            <div style={s.card}>
-              <h3 style={s.cardTitle}>1. Experience Level</h3>
+              <h3 style={{ ...s.cardTitle, marginTop: '2rem' }}>Experience Level</h3>
               <div style={s.levelGrid}>
                 {LEVELS.map(l => (
                   <button key={l.id}
-                    style={{ 
-                      ...s.levelBtn, 
-                      borderColor: level?.id === l.id ? l.color : 'var(--border)', 
-                      background: level?.id === l.id ? `${l.color}10` : 'var(--surface)', 
-                      color: level?.id === l.id ? l.color : 'var(--text-2)' 
-                    }}
+                    style={{ ...s.levelBtn, borderColor: level?.id === l.id ? l.color : 'var(--border)', background: level?.id === l.id ? `${l.color}15` : 'var(--surface)', color: level?.id === l.id ? l.color : 'var(--text-2)' }}
                     onClick={() => setLevel(l)}>
                     <div style={s.levelLabel}>{l.label}</div>
                     <div style={s.levelTag}>{l.tag}</div>
@@ -172,109 +117,59 @@ export default function Setup({ profile, onStart, onLogout, onGoBack }) {
                 ))}
               </div>
             </div>
-
-            {/* Tech Stack Topics */}
-            <div style={s.card}>
-              <h3 style={s.cardTitle}>2. Target Tech Stack</h3>
-              <div style={s.groupsStack}>
-                {TOPIC_GROUPS.map(group => (
-                  <div key={group.name} style={s.group}>
-                    <h4 style={s.groupName}>{group.name}</h4>
-                    <div style={s.topicGrid}>
-                      {group.topics.map(t => {
-                        const sel = !!topics.find(x => x.id === t.id)
-                        return (
-                          <button key={t.id}
-                            style={{ 
-                              ...s.topicBtn, 
-                              borderColor: sel ? 'var(--primary)' : 'var(--border)', 
-                              background: sel ? 'var(--primary-l)' : 'var(--surface)', 
-                              color: sel ? 'var(--primary)' : 'var(--text-2)' 
-                            }}
-                            onClick={() => toggleTopic(t)}>
-                            <span style={s.topicIcon}>{t.icon}</span>
-                            <span style={s.topicLabel}>{t.label}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
-          {/* Preferences Sidebar */}
-          <div style={s.sideCol}>
-            <div style={s.card}>
-              <h3 style={s.cardTitle}>3. Interview Mode</h3>
+          {/* Section 2: Tech Stack (if technical) */}
+          <div style={s.section}>
+            {type === 'technical' ? (
+              <div style={s.proCard}>
+                <h3 style={s.cardTitle}>Target Tech Stack</h3>
+                <div style={s.topicScroll}>
+                  {TOPIC_GROUPS.map(group => (
+                    <div key={group.name} style={s.group}>
+                      <div style={s.groupName}>{group.name}</div>
+                      <div style={s.topicGrid}>
+                        {group.topics.map(t => {
+                          const sel = !!topics.find(x => x.id === t.id)
+                          return (
+                            <button key={t.id}
+                              style={{ ...s.topicBtn, borderColor: sel ? 'var(--primary)' : 'var(--border)', background: sel ? 'var(--primary-l)' : 'var(--surface)', color: sel ? 'var(--primary)' : 'var(--text-2)' }}
+                              onClick={() => toggleTopic(t)}>
+                              <span style={s.tIcon}>{t.icon}</span>
+                              <span style={s.tLabel}>{t.label}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={s.behavioralInfo}>
+                <div style={s.infoIcon}>🤝</div>
+                <h3 style={s.infoTitle}>Behavioral Focus</h3>
+                <p style={s.infoDesc}>Alex will focus on incident management, blameless culture, and situational leadership scenarios. Tech stack selection is disabled.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Modes & Length */}
+          <div style={s.section}>
+            <div style={s.proCard}>
+              <h3 style={s.cardTitle}>Mode & Length</h3>
               <div style={s.modeGrid}>
-                {[
-                  { id: 'text', icon: '⌨️', title: 'Text' },
-                  { id: 'voice', icon: '🎙️', title: 'Voice' }
-                ].map(m => (
-                  <button key={m.id}
-                    style={{ 
-                      ...s.modeBtn, 
-                      borderColor: mode === m.id ? 'var(--primary)' : 'var(--border)', 
-                      background: mode === m.id ? 'var(--primary-l)' : 'var(--surface)' 
-                    }}
-                    onClick={() => setMode(m.id)}>
-                    <span style={s.modeIcon}>{m.icon}</span>
-                    <span style={s.modeTitle}>{m.title}</span>
+                {['text', 'voice'].map(m => (
+                  <button key={m} style={{ ...s.modeBtn, background: mode === m ? 'var(--primary-l)' : 'var(--surface-2)', color: mode === m ? 'var(--primary)' : 'var(--muted)' }} onClick={() => setMode(m)}>
+                    {m.toUpperCase()}
                   </button>
                 ))}
               </div>
-            </div>
-
-            <div style={s.card}>
-              <h3 style={s.cardTitle}>4. Session Length</h3>
-              <div style={s.typeTabs}>
-                <button 
-                  style={{ ...s.tab, borderBottom: sessionType === 'questions' ? '2px solid var(--primary)' : 'none', color: sessionType === 'questions' ? 'var(--primary)' : 'var(--muted)' }}
-                  onClick={() => setSessionType('questions')}>Questions</button>
-                <button 
-                  style={{ ...s.tab, borderBottom: sessionType === 'time' ? '2px solid var(--primary)' : 'none', color: sessionType === 'time' ? 'var(--primary)' : 'var(--muted)' }}
-                  onClick={() => setSessionType('time')}>Time Limit</button>
-              </div>
-              
-              <div style={s.optionGrid}>
-                {(sessionType === 'questions' ? Q_OPTIONS : TIME_OPTIONS).map(val => (
-                  <button key={val}
-                    style={{ 
-                      ...s.optionBtn, 
-                      borderColor: (sessionType === 'questions' ? (customQ ? '' : qTarget) : (customT ? '' : timeTarget)) === val ? 'var(--primary)' : 'var(--border)',
-                      background: (sessionType === 'questions' ? (customQ ? '' : qTarget) : (customT ? '' : timeTarget)) === val ? 'var(--primary-l)' : 'var(--surface)'
-                    }}
-                    onClick={() => {
-                      if (sessionType === 'questions') { setQTarget(val); setCustomQ('') }
-                      else { setTimeTarget(val); setCustomT('') }
-                    }}>
-                    {val}{sessionType === 'questions' ? ' Qs' : ' min'}
-                  </button>
-                ))}
-              </div>
-              <input 
-                style={s.customInput} 
-                type="number" 
-                placeholder={`Custom ${sessionType === 'questions' ? 'questions' : 'minutes'}...`}
-                value={sessionType === 'questions' ? customQ : customT}
-                onChange={e => sessionType === 'questions' ? setCustomQ(e.target.value) : setCustomT(e.target.value)}
-              />
-            </div>
-
-            <div style={s.card}>
-              <h3 style={s.cardTitle}>5. Daily Commitment</h3>
-              <p style={s.cardSub}>Minutes per day for your study roadmap</p>
-              <div style={s.timeInputRow}>
-                <input type="range" min="15" max="240" step="15" value={studyTime} onChange={e => setStudyTime(e.target.value)} style={s.range} />
-                <span style={s.timeVal}>{studyTime}m/day</span>
+              <div style={s.qControl}>
+                <div style={s.qLabel}>Questions: <span style={s.qVal}>{qTarget}</span></div>
+                <input type="range" min="5" max="25" step="5" value={qTarget} onChange={e => setQTarget(e.target.value)} style={s.range} />
               </div>
             </div>
-
-            <button style={{ ...s.startBtn, opacity: canStart ? 1 : 0.5 }} disabled={!canStart} onClick={handleStart}>
-              Begin Interview
-            </button>
           </div>
         </div>
       </main>
@@ -283,46 +178,55 @@ export default function Setup({ profile, onStart, onLogout, onGoBack }) {
 }
 
 const s = {
-  page: { minHeight: '100vh', background: 'var(--bg)' },
-  container: { maxWidth: 1200, margin: '0 auto', padding: '0 1.5rem' },
-  nav: { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0.75rem 0', position: 'sticky', top: 0, zIndex: 100 },
-  navContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  navLeft: { display: 'flex', alignItems: 'center', gap: '1.5rem' },
-  backBtn: { background: 'none', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500, color: 'var(--text)' },
-  navTitle: { fontWeight: 700, fontSize: 16, color: 'var(--text)' },
-  navRight: { display: 'flex', alignItems: 'center', gap: '1rem' },
-  navName: { fontSize: 14, fontWeight: 500, color: 'var(--text-2)' },
-  logoutBtn: { background: 'none', border: 'none', color: 'var(--muted)', fontSize: 13, cursor: 'pointer' },
-  hero: { padding: '3rem 0 2rem' },
-  heroTitle: { fontSize: '2.5rem', fontWeight: 800, color: 'var(--text)' },
-  accent: { color: 'var(--primary)' },
-  heroSub: { color: 'var(--muted)', fontSize: '1.1rem', marginTop: '0.5rem' },
-  grid: { display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem' },
-  mainCol: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-  sideCol: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-  card: { background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' },
-  cardTitle: { fontSize: 16, fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text)' },
-  levelGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem' },
-  levelBtn: { padding: '1rem 0.5rem', borderRadius: 12, border: '2px solid', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s' },
-  levelLabel: { fontWeight: 700, fontSize: 14 },
-  levelTag: { fontSize: 10, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' },
-  groupsStack: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-  groupName: { fontSize: 13, fontWeight: 600, color: 'var(--muted)', marginBottom: '0.75rem', textTransform: 'uppercase' },
-  topicGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '0.75rem' },
-  topicBtn: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0.75rem', borderRadius: 12, border: '2px solid', transition: 'all 0.2s' },
-  topicIcon: { fontSize: '1.5rem', marginBottom: 6 },
-  topicLabel: { fontSize: 11, fontWeight: 600 },
-  modeGrid: { display: 'flex', gap: '0.75rem' },
-  modeBtn: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0.75rem', borderRadius: 10, border: '2px solid', color: 'var(--text)' },
-  modeTitle: { fontWeight: 600, fontSize: 14 },
-  typeTabs: { display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '1rem' },
-  tab: { padding: '8px 0', background: 'none', border: 'none', fontWeight: 600, fontSize: 14, cursor: 'pointer' },
-  optionGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' },
-  optionBtn: { padding: '8px', borderRadius: 8, border: '1px solid', fontWeight: 500, fontSize: 13, color: 'var(--text)' },
-  customInput: { width: '100%', marginTop: '0.75rem', padding: '10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', outline: 'none' },
-  cardSub: { fontSize: 12, color: 'var(--muted)', marginBottom: '1rem' },
-  timeInputRow: { display: 'flex', alignItems: 'center', gap: '1rem' },
-  range: { flex: 1 },
-  timeVal: { fontWeight: 700, fontSize: 14, minWidth: 60, color: 'var(--text)' },
-  startBtn: { background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 12, padding: '1rem', fontWeight: 700, fontSize: 16, cursor: 'pointer', boxShadow: 'var(--shadow-lg)' }
+  page: { minHeight: '100vh', background: 'var(--bg)', display: 'flex' },
+  sidebar: { width: 'var(--sidebar-w)', background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '1.5rem', position: 'fixed', height: '100vh', zIndex: 100 },
+  sidebarHeader: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: '2.5rem' },
+  logoSmall: { width: 32, height: 32, background: 'var(--primary)', color: '#fff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 },
+  logoText: { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.01em' },
+  sidebarNav: { display: 'flex', flexDirection: 'column', gap: 6, flex: 1 },
+  navItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, fontSize: 14, fontWeight: 600, color: 'var(--muted)', background: 'none', textAlign: 'left' },
+  navItemActive: { background: 'var(--primary-l)', color: 'var(--primary)' },
+  navIcon: { fontSize: 16 },
+  sidebarFooter: { borderTop: '1px solid var(--border)', paddingTop: '1.5rem' },
+  backBtn: { background: 'none', color: 'var(--muted)', fontWeight: 700, fontSize: 12 },
+  
+  main: { flex: 1, marginLeft: 'var(--sidebar-w)', padding: '2.5rem 3.5rem' },
+  topHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' },
+  mainTitle: { fontSize: '1.75rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em' },
+  mainSubtitle: { fontSize: '0.95rem', color: 'var(--muted)', fontWeight: 500 },
+  primaryBtn: { background: 'var(--primary)', color: '#fff', padding: '14px 28px', borderRadius: 12, fontWeight: 800, fontSize: 15, boxShadow: '0 8px 20px var(--primary-glow)' },
+  
+  grid: { display: 'grid', gridTemplateColumns: '380px 1fr 300px', gap: '1.5rem', alignItems: 'start' },
+  proCard: { background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', padding: '1.75rem' },
+  cardTitle: { fontSize: 12, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: '1.25rem', letterSpacing: '0.05em' },
+  
+  typeGrid: { display: 'flex', gap: '1rem' },
+  typeBtn: { flex: 1, padding: '1.5rem 1rem', borderRadius: 16, border: '2px solid', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 },
+  typeIcon: { fontSize: 24 },
+  typeTitle: { fontSize: 14, fontWeight: 800 },
+  
+  levelGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' },
+  levelBtn: { padding: '1rem 0.5rem', borderRadius: 12, border: '2px solid', textAlign: 'center' },
+  levelLabel: { fontWeight: 800, fontSize: 14 },
+  levelTag: { fontSize: 10, fontWeight: 600, textTransform: 'uppercase', marginTop: 4 },
+  
+  topicScroll: { maxHeight: 500, overflowY: 'auto', paddingRight: '1rem' },
+  group: { marginBottom: '2rem' },
+  groupName: { fontSize: 11, fontWeight: 800, color: 'var(--primary)', marginBottom: '1rem', textTransform: 'uppercase' },
+  topicGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '0.75rem' },
+  topicBtn: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem 0.5rem', borderRadius: 14, border: '2px solid' },
+  tIcon: { fontSize: 20, marginBottom: 8 },
+  tLabel: { fontSize: 12, fontWeight: 700 },
+  
+  behavioralInfo: { background: 'var(--primary-l)', borderRadius: 'var(--radius)', padding: '3rem 2rem', textAlign: 'center' },
+  infoIcon: { fontSize: '3rem', marginBottom: '1.5rem' },
+  infoTitle: { fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '1rem' },
+  infoDesc: { fontSize: '0.95rem', color: 'var(--text-2)', lineHeight: 1.6 },
+  
+  modeGrid: { display: 'flex', gap: 8, marginBottom: '2rem' },
+  modeBtn: { flex: 1, padding: '10px', borderRadius: 10, fontWeight: 800, fontSize: 11 },
+  qControl: { marginTop: '1.5rem' },
+  qLabel: { fontSize: 13, fontWeight: 700, marginBottom: 12, color: 'var(--text)' },
+  qVal: { color: 'var(--primary)', fontSize: 16 },
+  range: { width: '100%' }
 }
