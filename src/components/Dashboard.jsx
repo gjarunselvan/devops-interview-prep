@@ -5,7 +5,7 @@ import mammoth from 'mammoth'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
 
-export default function Dashboard({ profile, onStartSession, onLogout, theme, bgColor, onPersonalize, onViewReport }) {
+export default function Dashboard({ profile, onStartSession, onLogout, theme, bgColor, onPersonalize, onViewReport, onUpdateProfile }) {
   const [sessions, setSessions] = useState([])
   const [roadmap, setRoadmap] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -44,11 +44,14 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const res = await fetch('/api/analyze-resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resumeText: text }) })
       const data = await res.json()
       if (data.result) {
+        const updatedMetadata = { ...(profile.metadata || {}), ...data.result }
         await supabase.from('profiles').update({ 
           resume_text: text, 
-          metadata: { ...(profile.metadata || {}), ...data.result } 
+          metadata: updatedMetadata 
         }).eq('id', profile.id)
-        alert('Resume Processed!'); window.location.reload()
+        
+        // Instant global update without reload
+        onUpdateProfile({ ...profile, resume_text: text, metadata: updatedMetadata })
       }
     } catch (err) { alert(err.message) } finally { setAnalyzing(false) }
   }
@@ -60,10 +63,25 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const data = await res.json()
       if (data.result) {
         const { error } = await supabase.from('roadmaps').insert({ user_id: profile.id, content: data.result })
-        if (error) alert('Error: "roadmaps" table not found in your Supabase project.')
-        else setRoadmap(data.result)
+        if (error) throw new Error('Roadmaps table error.')
+        setRoadmap(data.result)
       }
-    } catch (err) { alert(err.message) } finally { setGenerating(false) }
+    } catch (err) { console.error(err) } finally { setGenerating(false) }
+  }
+
+  function handleSurpriseMe() {
+    const mixedConfig = {
+      level: { tag: profile.experience_level || 'Mid-Level', label: profile.experience_level || 'Mid-Level' },
+      topics: [], 
+      topicList: 'Full DevOps Stack (Mixed Domains)',
+      mode: 'text',
+      sessionType: 'questions',
+      totalQ: 10,
+      studyTime: profile.study_daily_mins || 60,
+      interviewType: 'mixed',
+      difficulty: 'hard'
+    }
+    onStartSession(mixedConfig)
   }
 
   const avgScore = sessions.length > 0 ? (sessions.reduce((acc, s) => acc + (s.avg_score || 0), 0) / sessions.length).toFixed(1) : '0.0'
@@ -125,6 +143,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
           <div style={s.right}>
             <div style={{ display: 'flex', gap: 15, marginBottom: 20 }}>
               <button style={{ ...s.startBtn, flex: 2, margin: 0 }} onClick={() => onStartSession()}>🚀 Start Interview</button>
+              <button style={s.surpriseBtn} onClick={handleSurpriseMe}>✨ Surprise Me</button>
               <button style={s.reBtn} onClick={() => document.getElementById('res-up').click()}>{analyzing ? '⏳' : '🔄'} Update Resume</button>
             </div>
 
@@ -205,6 +224,7 @@ const s = {
   improveText:  { fontSize: 12, fontWeight: 700, color: 'var(--text2)' },
   improveDate:  { fontSize: 9, color: 'var(--muted)', marginTop: 3 },
   startBtn:     { padding: '20px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 16, fontWeight: 950, boxShadow: '0 8px 20px var(--primary-glow)', cursor: 'pointer' },
+  surpriseBtn:  { flex: 1, padding: '10px 20px', background: 'linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)', color: '#fff', borderRadius: 12, fontSize: 13, fontWeight: 800, border: 'none', cursor: 'pointer' },
   reBtn:        { padding: '10px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: 'pointer' },
   roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem' },
   roadmapDay:   { minWidth: 200, borderLeft: '2px solid var(--primary-l)', paddingLeft: 14 },

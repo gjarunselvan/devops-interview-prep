@@ -124,10 +124,14 @@ export default function App() {
     <>
       {screen === SCREENS.AUTH      && <Auth onAuth={loadUserAndGo} />}
       {screen === SCREENS.DASHBOARD && profile && (
-        <Dashboard profile={profile} theme={theme} bgColor={bgColor} 
+        <Dashboard 
+          profile={profile} 
+          theme={theme} 
+          bgColor={bgColor} 
           onStartSession={() => setScreen(SCREENS.SETUP)} 
           onLogout={() => supabase.auth.signOut()}
           onPersonalize={handlePersonalize}
+          onUpdateProfile={(newProfile) => setProfile(newProfile)}
           onViewReport={(sess) => {
             setConfig({ level: { tag: sess.level }, topicList: sess.topics, mode: sess.mode, interviewType: sess.interview_type || 'technical' })
             setHistory(sess.history); setSessionId(sess.id); setScreen(SCREENS.REPORT)
