@@ -101,3 +101,17 @@ button:active { transform: scale(0.96); }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+
+/* Markdown Formatting */
+.markdown-body {
+  line-height: 1.6;
+  font-size: 14px;
+}
+.markdown-body p { margin-bottom: 12px; }
+.markdown-body strong { color: var(--primary); font-weight: 800; }
+.markdown-body ul, .markdown-body ol { margin-left: 20px; margin-bottom: 12px; }
+.markdown-body li { margin-bottom: 4px; }
+.markdown-body code { background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; color: var(--text); }
+[data-theme='dark'] .markdown-body code { background: rgba(255,255,255,0.1); }
+.markdown-body pre { background: var(--bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; margin-bottom: 12px; }
+.markdown-body pre code { background: transparent; padding: 0; color: inherit; }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 
 function scoreColor(score) {
   if (score >= 8) return 'var(--green)'
@@ -75,7 +76,7 @@ export default function Report({ history, config, profile, onRestart, onGoHome, 
                 <div style={s.qaHeader} onClick={() => setExpanded(expanded === i ? null : i)}>
                   <div style={s.qaLeft}>
                     <span style={s.qNum}>Q{i + 1}</span>
-                    <p style={s.qText}>{h.question}</p>
+                    <div className="markdown-body" style={s.qText}><ReactMarkdown>{h.question}</ReactMarkdown></div>
                   </div>
                   <div style={s.qaRight}>
                     <span style={{ ...s.scoreTag, background: scoreBg(h.score), color: scoreColor(h.score) }}>{h.score}/10</span>
@@ -84,7 +85,7 @@ export default function Report({ history, config, profile, onRestart, onGoHome, 
                 {expanded === i && (
                   <div style={s.qaBody}>
                     <div style={s.box}><div style={s.boxLabel}>Your Response</div><p style={s.answerText}>"{h.answer}"</p></div>
-                    <div style={s.box}><div style={s.boxLabel}>Feedback</div><pre style={s.feedbackText}>{h.feedback}</pre></div>
+                    <div style={s.box}><div style={s.boxLabel}>Feedback</div><div className="markdown-body" style={s.feedbackText}><ReactMarkdown>{h.feedback}</ReactMarkdown></div></div>
                   </div>
                 )}
               </div>

@@ -7,22 +7,25 @@ import Report from './components/Report'
 import Dashboard from './components/Dashboard'
 
 const SCREENS = { AUTH: 'auth', DASHBOARD: 'dashboard', SETUP: 'setup', INTERVIEW: 'interview', REPORT: 'report' }
-
 export default function App() {
+  const envMissing = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY
+
   const [screen,    setScreen]    = useState(SCREENS.AUTH)
   const [user,      setUser]      = useState(null)
   const [profile,   setProfile]   = useState(null)
   const [config,    setConfig]    = useState(null)
   const [history,   setHistory]   = useState([])
   const [sessionId, setSessionId] = useState(null)
-  const [loading,   setLoading]   = useState(true)
+  const [loading,   setLoading]   = useState(!envMissing)
 
-  const [theme,     setTheme]     = useState(localStorage.getItem('theme') || 'light')
-  const [bgColor,   setBgColor]   = useState(localStorage.getItem('bg_color') || '')
-  const [xp,        setXp]        = useState(0)
-  const [level,     setLevel]     = useState(1)
+  // Personalization & Gamification State (with localStorage fallbacks)
+  const [theme,       setTheme]       = useState(localStorage.getItem('theme') || 'light')
+  const [bgColor,     setBgColor]     = useState(localStorage.getItem('bg_color') || '')
+  const [xp,          setXp]          = useState(0)
+  const [level,       setLevel]       = useState(1)
 
   useEffect(() => {
+    if (envMissing) return
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) await loadUserAndGo(session.user)
       setLoading(false)
@@ -33,7 +36,8 @@ export default function App() {
         localStorage.removeItem('theme'); localStorage.removeItem('bg_color')
       }
     })
-  }, [])
+  }, [envMissing])
+
 
   // ABSOLUTE THEME SYNC
   useEffect(() => {
@@ -105,6 +109,17 @@ export default function App() {
       await supabase.from('profiles').update({ metadata: updatedMeta }).eq('id', user.id)
     }
     setScreen(SCREENS.REPORT)
+  }
+
+  if (envMissing) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 20 }}>
+        <h1 style={{ color: 'var(--red)', marginBottom: 10 }}>Missing API Keys</h1>
+        <p style={{ maxWidth: 500, color: 'var(--text2)', lineHeight: 1.6 }}>
+          It looks like your Supabase credentials are missing. If you are on Vercel, please add <strong>VITE_SUPABASE_URL</strong> and <strong>VITE_SUPABASE_ANON_KEY</strong> to your Environment Variables and redeploy.
+        </p>
+      </div>
+    )
   }
 
   if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>

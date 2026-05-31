@@ -1,4 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
+import Editor from 'react-simple-code-editor'
+import { highlight, languages } from 'prismjs/components/prism-core'
+import 'prismjs/components/prism-yaml'
+import 'prismjs/components/prism-clike'
+import 'prismjs/themes/prism.css'
 
 const INTERVIEWER_NAME = 'Alex'
 
@@ -222,13 +228,23 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
 
             <div style={s.questionCard}>
               <div style={s.questionLabel}>Question {qIndex + 1}</div>
-              <p style={s.questionText}>{intro || (loading && !question) ? 'Preparing next question...' : question}</p>
+              <div className="markdown-body" style={s.questionText}>
+                {intro || (loading && !question) ? 'Preparing next question...' : <ReactMarkdown>{question}</ReactMarkdown>}
+              </div>
             </div>
 
             {!feedback && !intro && question && (
               <div style={s.answerCard}>
-                {mode === 'text' ? (
+                {inputMode === 'text' ? (
                   <textarea style={s.textarea} placeholder="Type your response..." value={answer} onChange={e => setAnswer(e.target.value)} rows={6} />
+                ) : inputMode === 'editor' ? (
+                  <div style={s.editorBox}>
+                    <Editor
+                      value={answer} onValueChange={c => setAnswer(c)}
+                      highlight={c => highlight(c, languages.yaml)}
+                      padding={20} style={s.editor}
+                    />
+                  </div>
                 ) : (
                   <div>
                     <div style={s.voiceBox}>{answer || (listening ? 'Listening...' : 'Press start to speak')}</div>
@@ -249,7 +265,9 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
                   <div style={s.feedbackTitle}>Feedback</div>
                   <div style={{ ...s.scoreBadge, background: scoreColor(parseInt(currentScore)) + '18', color: scoreColor(parseInt(currentScore)) }}>{currentScore}/10</div>
                 </div>
-                <pre style={s.feedbackText}>{feedback}</pre>
+                <div className="markdown-body" style={s.feedbackText}>
+                  <ReactMarkdown>{feedback}</ReactMarkdown>
+                </div>
                 <button style={s.nextBtn} onClick={nextQuestion}>{sessionType === 'questions' && qIndex + 1 >= totalQ ? 'View Report' : 'Next Question →'}</button>
               </div>
             )}
@@ -298,6 +316,8 @@ const s = {
   questionText:     { fontSize: 17, lineHeight: 1.7, color: 'var(--text)', fontWeight: 500 },
   answerCard:       { background: '#fff', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', boxShadow: 'var(--shadow)' },
   textarea:         { width: '100%', padding: '14px', border: '1.5px solid var(--border)', borderRadius: 10, fontSize: 15, outline: 'none', background: 'var(--surface2)' },
+  editorBox:        { background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', minHeight: 200 },
+  editor:           { fontFamily: '"JetBrains Mono", monospace', fontSize: 13 },
   voiceBox:         { minHeight: 100, background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   micBtn:           { padding: '10px 20px', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600 },
   submitBtn:        { width: '100%', marginTop: 14, padding: '13px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 9, fontSize: 15, fontWeight: 600 },
