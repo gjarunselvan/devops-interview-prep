@@ -80,8 +80,8 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
     TOPIC_GROUPS.forEach(g => g.topics.forEach(t => { if (recommended.includes(t.id)) initialTopics.push(t) }))
     if (initialTopics.length > 0) setTopics(initialTopics)
     
-    if (profile?.experience_level) {
-      const foundLevel = LEVELS.find(l => l.tag === profile.experience_level || l.id === profile.experience_level)
+    if (profile?.metadata?.experienceLevel) {
+      const foundLevel = LEVELS.find(l => l.label === profile.metadata.experienceLevel || l.tag === profile.metadata.experienceLevel)
       if (foundLevel) setLevel(foundLevel)
     }
   }, [profile])
@@ -91,23 +91,23 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
   }
 
   const topicList = topics.map(t => t.label).join(', ')
-  const canStart  = (level || customYears) && (type === 'behavioral' || topics.length > 0)
+  const canStart  = (level || customYears) && (type === 'behavioral' || type === 'surprise' || topics.length > 0)
 
-  const finalLevel = customYears ? { tag: `${customYears}y Experience`, label: `${customYears} Years`, color: '#2563eb' } : level
+  const finalLevel = customYears ? { tag: `${customYears}y Exp`, label: `${customYears} Years`, color: '#2563eb' } : level
   const finalQ = customQ ? parseInt(customQ) : qTarget
 
   function handleLaunch() {
     if (!canStart) return
     onStart({ 
       level: finalLevel, 
-      topics: type === 'behavioral' ? [] : topics, 
-      topicList: type === 'behavioral' ? 'Behavioral & Culture' : topicList, 
+      topics: (type === 'behavioral' || type === 'surprise') ? [] : topics, 
+      topicList: type === 'surprise' ? 'Any Domain (Surprise Mode)' : (type === 'behavioral' ? 'Behavioral & Culture' : topicList), 
       mode, 
       sessionType: 'questions', 
       totalQ: finalQ, 
       studyTime, 
       interviewType: type,
-      difficulty
+      difficulty: type === 'surprise' ? 'hard' : difficulty
     })
   }
 
@@ -165,10 +165,10 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               <div style={s.cardHeader}><span style={s.step}>02</span><div style={s.cardTitle}>Interview Track</div></div>
               <div style={s.typeStack}>
                 {[
-                  { id: 'technical', label: 'Technical Mastery', desc: 'Architecture & Troubleshooting' },
+                  { id: 'technical', label: 'Technical Screen', desc: 'Architecture & Tools' },
                   { id: 'coding',    label: 'Coding & IaC',      desc: 'Manifests & Scripting' },
-                  { id: 'behavioral', label: 'Leadership',       desc: 'Situational & STAR' },
-                  { id: 'mixed',      label: 'Comprehensive',    desc: 'All DevOps domains' }
+                  { id: 'behavioral', label: 'Leadership',       desc: 'Situational & Soft' },
+                  { id: 'surprise',   label: 'Surprise Me! ✨',  desc: 'Any topic, Hard difficulty' }
                 ].map(it => (
                   <button key={it.id} 
                     style={{ ...s.trackBtn, borderColor: type === it.id ? 'var(--primary)' : 'var(--border)', background: type === it.id ? 'var(--primary-l)' : 'var(--surface)', color: type === it.id ? 'var(--primary)' : 'var(--muted)' }}
@@ -181,7 +181,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
             </div>
 
             {/* Tech Stack */}
-            {(type !== 'behavioral') && (
+            {(type !== 'behavioral' && type !== 'surprise') && (
               <div style={s.card}>
                 <div style={s.cardHeader}><span style={s.step}>03</span><div style={s.cardTitle}>Technical Focus</div></div>
                 <div style={s.groupsContainer}>
@@ -215,7 +215,8 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               <div style={{ display: 'flex', gap: 12 }}>
                 {DIFFICULTIES.map(d => (
                   <button key={d.id}
-                    style={{ ...s.chipBtn, flex: 1, borderColor: difficulty === d.id ? d.color : 'var(--border)', background: difficulty === d.id ? `${d.color}15` : 'var(--surface)', color: difficulty === d.id ? d.color : 'var(--muted)' }}
+                    disabled={type === 'surprise'}
+                    style={{ ...s.chipBtn, flex: 1, borderColor: (type === 'surprise' ? 'hard' : difficulty) === d.id ? d.color : 'var(--border)', background: (type === 'surprise' ? 'hard' : difficulty) === d.id ? `${d.color}15` : 'var(--surface)', color: (type === 'surprise' ? 'hard' : difficulty) === d.id ? d.color : 'var(--muted)', opacity: type === 'surprise' && d.id !== 'hard' ? 0.4 : 1 }}
                     onClick={() => setDifficulty(d.id)}>
                     {d.label}
                   </button>
@@ -227,10 +228,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>05</span><div style={s.cardTitle}>Mode</div></div>
               <div style={{ display: 'flex', gap: 12 }}>
-                {[
-                  { id: 'text',  icon: '⌨️', title: 'Interactive Text' },
-                  { id: 'voice', icon: '🎙️', title: 'AI Voice' },
-                ].map(m => (
+                {[{ id: 'text',  icon: '⌨️', title: 'Interactive Text' }, { id: 'voice', icon: '🎙️', title: 'AI Voice' }].map(m => (
                   <button key={m.id}
                     style={{ ...s.modeBtn, flex: 1, borderColor: mode === m.id ? 'var(--primary)' : 'var(--border)', background: mode === m.id ? 'var(--primary-l)' : 'var(--surface)', color: mode === m.id ? 'var(--primary)' : 'var(--text2)' }}
                     onClick={() => setMode(m.id)}>
@@ -259,7 +257,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
             </div>
 
             <button style={{ ...s.startBtn, opacity: canStart ? 1 : 0.4 }} disabled={!canStart} onClick={handleLaunch}>
-              Start AI Simulation →
+              Initialize AI Simulation →
             </button>
           </div>
         </div>
@@ -278,7 +276,7 @@ const s = {
   themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
   avatar:       { width: 32, height: 32, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 12 },
   navName:      { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
-  logoutBtn:    { padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', color: 'var(--red)', fontSize: 11, fontWeight: 700 },
+  logoutBtn:    { padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', color: 'var(--red)', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
   content:      { maxWidth: '100%', padding: '2rem 4rem', margin: '0 auto' },
   hero:         { marginBottom: '3rem', textAlign: 'center' },
   heroTitle:    { fontSize: 40, fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.03em' },

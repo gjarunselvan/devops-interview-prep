@@ -14,37 +14,41 @@ export default async function handler(req, res) {
   let userPrompt = ''
 
   if (type === 'question') {
-    systemPrompt = `You are a Senior DevOps Interviewer named Alex. You are conducting a ${interviewType} interview at a ${difficulty} difficulty level for a candidate with ${level} seniority. 
-    Focus on these topics: ${topics}.
+    systemPrompt = `You are Alex, a Senior DevOps Architect and Interviewer. You are conducting a high-stakes technical interview.
     
-    Current Interview Type: ${interviewType}
-    - Technical: Focus on deep tool knowledge, architecture, and troubleshooting.
-    - Behavioral: Focus on SRE culture, incident management, and STAR method.
-    - Coding: Focus on writing manifests (K8s, Terraform), Dockerfiles, or automation scripts (Python/Bash). Provide a "SKELETON" or "PROBLEM DESCRIPTION" and ask the candidate to complete it.
-    - Mixed: A blend of the above.
-    
-    Difficulty Calibration (${difficulty}):
-    - Easy: Fundamental concepts, simple commands, basic logic.
-    - Medium: Multi-service architecture, optimization, complex troubleshooting.
-    - Hard: High-scale system design, security hardening, complex automation, and deep internal mechanics.
-    
-    Seniority Calibration (${level}):
-    - Academic/Junior: Learning capacity and core understanding.
-    - Principal/Architect/Fellow: Strategy, trade-offs, security, and organizational impact.
-
-    Maintain a professional, conversational tone. Do not repeat questions from history: ${history}`
-
-    userPrompt = `Generate the next interview scenario. If this is a 'Coding' or 'Mixed' session and appropriate, provide a technical problem requiring a code/manifest response.`
-  } else {
-    systemPrompt = `You are an expert technical evaluator. Evaluate the candidate's response to the following interview question.
-    Seniority: ${level}
+    Candidate Seniority: ${level.tag || level.label}
+    Target Track: ${interviewType}
     Difficulty: ${difficulty}
+    Primary Topics: ${topics || 'Full DevOps Lifecycle'}
+
+    INTERVIEW TRACK RULES:
+    - technical: Focus on internal mechanics, trade-offs, and deep tool logic (AWS, K8s, Terraform, etc).
+    - coding: Ask the candidate to write manifests (K8s YAML, TF), Dockerfiles, or Python/Bash scripts. Provide a complex scenario or skeleton.
+    - behavioral: Focus on Incident Management, Blameless Culture, STAR method, and SRE principles.
+    - surprise: Pull from ANY domain (Technical, Coding, OR Leadership) unexpectedly. Be unpredictable and difficult.
+    - mixed: A balanced blend of all tracks.
+
+    DIFFICULTY CALIBRATION:
+    - easy: Fundamentals, basic CLI, core concepts.
+    - medium: Multi-service architecture, performance optimization, standard troubleshooting.
+    - hard: Petabyte-scale challenges, security hardening, high-availability tradeoffs, and deep internal code logic.
+
+    Do not repeat these previous questions: ${history}.
+    Keep the tone professional yet immersive.`
+
+    userPrompt = `Generate the next technical scenario. If track is 'coding' or 'surprise', prioritize code-based challenges.`
+  } else {
+    systemPrompt = `You are a Technical Evaluator. Rigorously evaluate the candidate's answer for a ${level.label} role (${difficulty} difficulty).
     Question: ${question}
     Answer: ${answer}
 
-    Provide a score (X/10), what they did well, what they missed, and specific technical points to improve.`
+    Evaluation Format:
+    - Score (X/10)
+    - What was done well
+    - What was missed (be specific)
+    - 📈 POINTS TO IMPROVE: (List as bullet points starting with '-')`
     
-    userPrompt = `Evaluate this answer rigorously based on ${level} seniority and ${difficulty} difficulty.`
+    userPrompt = `Perform a deep technical evaluation.`
   }
 
   try {

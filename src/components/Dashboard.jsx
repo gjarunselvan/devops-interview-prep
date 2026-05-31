@@ -21,10 +21,12 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
     try {
       const { data: sess } = await supabase.from('sessions').select('*').eq('user_id', profile.id).eq('completed', true).order('created_at', { ascending: false })
       setSessions(sess || [])
+      
+      // Safety check for roadmaps table
       const { data: road, error: roadError } = await supabase.from('roadmaps').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
       if (!roadError) setRoadmap(road?.content || null)
     } catch (err) {
-      console.warn('Dashboard data fetch warning:', err.message)
+      console.warn('Dashboard fetch warning:', err.message)
     }
     setLoading(false)
   }
@@ -60,25 +62,10 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const data = await res.json()
       if (data.result) {
         const { error } = await supabase.from('roadmaps').insert({ user_id: profile.id, content: data.result })
-        if (error) throw new Error('Roadmaps table error.')
-        setRoadmap(data.result)
+        if (error) alert('Error: "roadmaps" table not found in your Supabase project.')
+        else setRoadmap(data.result)
       }
-    } catch (err) { alert(err.message) } finally { setGenerating(false) }
-  }
-
-  function handleSurpriseMe() {
-    const mixedConfig = {
-      level: { tag: profile.experience_level || 'Mid-Level', label: profile.experience_level || 'Mid-Level' },
-      topics: [], 
-      topicList: 'Full DevOps Stack (Mixed Domains)',
-      mode: 'text',
-      sessionType: 'questions',
-      totalQ: 10,
-      studyTime: profile.study_daily_mins || 60,
-      interviewType: 'mixed',
-      difficulty: 'hard'
-    }
-    onStartSession(mixedConfig)
+    } catch (err) { console.error(err) } finally { setGenerating(false) }
   }
 
   const avgScore = sessions.length > 0 ? (sessions.reduce((acc, s) => acc + (s.avg_score || 0), 0) / sessions.length).toFixed(1) : '0.0'
@@ -138,8 +125,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
           <div style={s.right}>
             <div style={{ display: 'flex', gap: 15, marginBottom: 20 }}>
-              <button style={{ ...s.startBtn, flex: 2, margin: 0 }} onClick={() => onStartSession()}>🚀 Start Interview</button>
-              <button style={s.surpriseBtn} onClick={handleSurpriseMe}>✨ Surprise Me</button>
+              <button style={{ ...s.startBtn, flex: 1, margin: 0 }} onClick={() => onStartSession()}>🚀 Start Interview</button>
               <button style={s.reBtn} onClick={() => document.getElementById('res-up').click()}>{analyzing ? '⏳' : '🔄'} Update Resume</button>
             </div>
 
@@ -155,9 +141,9 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
                           <div style={s.taskName}>{t.title}</div>
                           <div style={s.taskMeta}><span>{t.duration}</span> {t.resourceLink && <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.taskLink}>RESOURCE</a>}</div>
                         </div>
-                      ))}
-                    </div>
-                  ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : <p style={s.empty}>No active roadmap.</p>}
             </div>
@@ -198,7 +184,7 @@ const s = {
   themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
   avatar:       { width: 32, height: 32, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 12 },
   navName:      { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
-  logoutBtn:    { padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', color: 'var(--red)', fontSize: 11, fontWeight: 700 },
+  logoutBtn:    { padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', color: 'var(--red)', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
   content:      { padding: '2rem 4rem', maxWidth: 1600, margin: '0 auto' },
   hero:         { marginBottom: '2.5rem' },
   heroTitle:    { fontSize: 32, fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.02em' },
@@ -218,9 +204,8 @@ const s = {
   improveItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, cursor: 'pointer' },
   improveText:  { fontSize: 12, fontWeight: 700, color: 'var(--text2)' },
   improveDate:  { fontSize: 9, color: 'var(--muted)', marginTop: 3 },
-  startBtn:     { padding: '20px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 16, fontWeight: 950, boxShadow: '0 8px 20px var(--primary-glow)' },
-  surpriseBtn:  { flex: 1, padding: '10px 20px', background: 'linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)', color: '#fff', borderRadius: 12, fontSize: 13, fontWeight: 800, border: 'none' },
-  reBtn:        { padding: '10px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, fontWeight: 800 },
+  startBtn:     { padding: '20px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 16, fontWeight: 950, boxShadow: '0 8px 20px var(--primary-glow)', cursor: 'pointer' },
+  reBtn:        { padding: '10px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: 'pointer' },
   roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem' },
   roadmapDay:   { minWidth: 200, borderLeft: '2px solid var(--primary-l)', paddingLeft: 14 },
   dayTitle:     { fontSize: 10, fontWeight: 900, color: 'var(--primary)', marginBottom: 10, textTransform: 'uppercase' },
@@ -237,6 +222,6 @@ const s = {
   skill:        { fontSize: 10, fontWeight: 700, background: 'var(--surface2)', padding: '4px 10px', borderRadius: 6 },
   dropzone:     { border: '1.5px dashed var(--border2)', borderRadius: 12, padding: '2rem', textAlign: 'center', background: 'var(--surface2)', cursor: 'pointer' },
   loading:      { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'var(--muted)', background: 'var(--bg)' },
-  ghostBtn:     { background: 'none', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 6, fontSize: 9, fontWeight: 800, color: 'var(--muted)' },
+  ghostBtn:     { background: 'none', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 6, fontSize: 9, fontWeight: 800, color: 'var(--muted)', cursor: 'pointer' },
   empty:        { textAlign: 'center', padding: '1rem', color: 'var(--muted)', fontSize: 12 }
 }
