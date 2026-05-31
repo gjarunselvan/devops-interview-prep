@@ -72,6 +72,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
   const [qTarget,     setQTarget]     = useState(10)
   const [studyTime,   setStudyTime]   = useState(profile?.study_daily_mins || 60)
   const [customYears, setCustomYears] = useState('')
+  const [customQ,     setCustomQ]     = useState('')
 
   useEffect(() => {
     const recommended = profile?.metadata?.recommendedTopics || []
@@ -90,9 +91,10 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
   }
 
   const topicList = topics.map(t => t.label).join(', ')
-  const canStart  = level && (type === 'behavioral' || topics.length > 0)
+  const canStart  = (level || customYears) && (type === 'behavioral' || topics.length > 0)
 
   const finalLevel = customYears ? { tag: `${customYears}y Experience`, label: `${customYears} Years`, color: '#2563eb' } : level
+  const finalQ = customQ ? parseInt(customQ) : qTarget
 
   function handleLaunch() {
     if (!canStart) return
@@ -102,7 +104,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
       topicList: type === 'behavioral' ? 'Behavioral & Culture' : topicList, 
       mode, 
       sessionType: 'questions', 
-      totalQ: qTarget, 
+      totalQ: finalQ, 
       studyTime, 
       interviewType: type,
       difficulty
@@ -114,13 +116,13 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
       <nav style={s.nav}>
         <div style={{ ...s.navBrand, cursor: 'pointer' }} onClick={onGoBack}>
           <div style={s.logo}>DI</div>
-          <span style={s.navTitle}>DevOps Platform</span>
+          <span style={s.navTitle}>Platform Initialization</span>
         </div>
         <div style={s.navRight}>
           <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
-          <div style={s.avatar}>{profile?.full_name?.[0] || 'U'}</div>
+          <div style={s.avatar}>{profile?.full_name?.[0]}</div>
           <span style={s.navName}>{profile?.full_name}</span>
           <button style={s.logoutBtn} onClick={onLogout}>Sign out</button>
         </div>
@@ -128,15 +130,15 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
 
       <div style={s.content}>
         <div style={s.hero}>
-          <h2 style={s.heroTitle}>Launch your <span style={{ color: 'var(--primary)' }}>Technical Simulation</span></h2>
-          <p style={s.heroSub}>Tailor every aspect of the interview to match your career stage.</p>
+          <h2 style={s.heroTitle}>Simulate your <span style={{ color: 'var(--primary)' }}>Expert Path</span></h2>
+          <p style={s.heroSub}>Customize the track and difficulty to match your career goals.</p>
         </div>
 
         <div style={s.grid}>
           <div style={s.configPanel}>
             {/* Seniority */}
             <div style={s.card}>
-              <div style={s.cardHeader}><span style={s.step}>01</span><div style={s.cardTitle}>Career Seniority</div></div>
+              <div style={s.cardHeader}><span style={s.step}>01</span><div style={s.cardTitle}>Seniority Level</div></div>
               <div style={s.levelGrid}>
                 {LEVELS.map(l => (
                   <button key={l.id}
@@ -150,23 +152,23 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               <div style={{ marginTop: 16 }}>
                 <input 
                   type="number" 
-                  placeholder="Or enter custom years (e.g. 45)..." 
+                  placeholder="Or enter custom years of experience..." 
                   style={s.input} 
                   value={customYears} 
-                  onChange={e => { setCustomYears(e.target.value); setLevel({ id: 'custom' }); }}
+                  onChange={e => { setCustomYears(e.target.value); setLevel(null); }}
                 />
               </div>
             </div>
 
-            {/* Track Selector */}
+            {/* Track */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>02</span><div style={s.cardTitle}>Interview Track</div></div>
               <div style={s.typeStack}>
                 {[
-                  { id: 'technical', label: 'Technical Screen', desc: 'Tools, syntax & architecture' },
-                  { id: 'coding',    label: 'Coding & IaC',    desc: 'Manifests, automation & logic' },
-                  { id: 'behavioral', label: 'SRE & Culture',   desc: 'Situational & Soft skills' },
-                  { id: 'mixed',      label: 'Mixed Mode',      desc: 'All-in-one comprehensive' }
+                  { id: 'technical', label: 'Technical Mastery', desc: 'Architecture & Troubleshooting' },
+                  { id: 'coding',    label: 'Coding & IaC',      desc: 'Manifests & Scripting' },
+                  { id: 'behavioral', label: 'Leadership',       desc: 'Situational & STAR' },
+                  { id: 'mixed',      label: 'Comprehensive',    desc: 'All DevOps domains' }
                 ].map(it => (
                   <button key={it.id} 
                     style={{ ...s.trackBtn, borderColor: type === it.id ? 'var(--primary)' : 'var(--border)', background: type === it.id ? 'var(--primary-l)' : 'var(--surface)', color: type === it.id ? 'var(--primary)' : 'var(--muted)' }}
@@ -209,7 +211,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
           <div style={s.settingsPanel}>
             {/* Difficulty */}
             <div style={s.card}>
-              <div style={s.cardHeader}><span style={s.step}>04</span><div style={s.cardTitle}>Simulation Difficulty</div></div>
+              <div style={s.cardHeader}><span style={s.step}>04</span><div style={s.cardTitle}>Session Difficulty</div></div>
               <div style={{ display: 'flex', gap: 12 }}>
                 {DIFFICULTIES.map(d => (
                   <button key={d.id}
@@ -221,12 +223,13 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
+            {/* Mode */}
             <div style={s.card}>
-              <div style={s.cardHeader}><span style={s.step}>05</span><div style={s.cardTitle}>Interaction Mode</div></div>
+              <div style={s.cardHeader}><span style={s.step}>05</span><div style={s.cardTitle}>Mode</div></div>
               <div style={{ display: 'flex', gap: 12 }}>
                 {[
-                  { id: 'text',  icon: '⌨️', title: 'Text' },
-                  { id: 'voice', icon: '🎙️', title: 'Voice' },
+                  { id: 'text',  icon: '⌨️', title: 'Interactive Text' },
+                  { id: 'voice', icon: '🎙️', title: 'AI Voice' },
                 ].map(m => (
                   <button key={m.id}
                     style={{ ...s.modeBtn, flex: 1, borderColor: mode === m.id ? 'var(--primary)' : 'var(--border)', background: mode === m.id ? 'var(--primary-l)' : 'var(--surface)', color: mode === m.id ? 'var(--primary)' : 'var(--text2)' }}
@@ -238,6 +241,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
               </div>
             </div>
 
+            {/* Intensity */}
             <div style={s.card}>
               <div style={s.cardHeader}><span style={s.step}>06</span><div style={s.cardTitle}>Intensity</div></div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -249,21 +253,13 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
                   </button>
                 ))}
               </div>
-              <div style={{ marginBottom: 20 }}>
-                <input 
-                  type="number" 
-                  placeholder="Or enter custom Q count..." 
-                  style={s.input} 
-                  value={customQ} 
-                  onChange={e => { setCustomQ(e.target.value); setQTarget(null); }}
-                />
-              </div>
-              <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Prep Budget: {studyTime}m/day</div>
+              <input type="number" placeholder="Or custom quantity..." style={s.input} value={customQ} onChange={e => { setCustomQ(e.target.value); setQTarget(null); }} />
+              <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--muted)', marginTop: 20, marginBottom: 12, textTransform: 'uppercase' }}>Daily Prep: {studyTime}m</div>
               <input type="range" min="15" max="240" step="15" value={studyTime} onChange={e => setStudyTime(e.target.value)} style={{ width: '100%' }} />
             </div>
 
             <button style={{ ...s.startBtn, opacity: canStart ? 1 : 0.4 }} disabled={!canStart} onClick={handleLaunch}>
-              Start {type.toUpperCase()} Simulation →
+              Start AI Simulation →
             </button>
           </div>
         </div>
@@ -276,14 +272,14 @@ const s = {
   page:         { minHeight: '100vh', background: 'var(--bg)', width: '100%' },
   nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
   navBrand:     { display: 'flex', alignItems: 'center', gap: 10 },
-  logo:         { width: 36, height: 36, background: 'var(--primary)', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 14 },
+  logo:         { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
   navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
-  navRight:     { display: 'flex', alignItems: 'center', gap: 16 },
-  themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer' },
-  avatar:       { width: 34, height: 34, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 14 },
-  navName:      { fontSize: 14, fontWeight: 700, color: 'var(--text2)' },
-  logoutBtn:    { padding: '6px 14px', border: '1.5px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--red)', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
-  content:      { maxWidth: 1300, margin: '0 auto', padding: '2rem 3rem' },
+  navRight:     { display: 'flex', alignItems: 'center', gap: 15 },
+  themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
+  avatar:       { width: 32, height: 32, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 12 },
+  navName:      { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
+  logoutBtn:    { padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', color: 'var(--red)', fontSize: 11, fontWeight: 700 },
+  content:      { maxWidth: '100%', padding: '2rem 4rem', margin: '0 auto' },
   hero:         { marginBottom: '3rem', textAlign: 'center' },
   heroTitle:    { fontSize: 40, fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.03em' },
   heroSub:      { fontSize: 18, color: 'var(--muted)', marginTop: 8, fontWeight: 500 },

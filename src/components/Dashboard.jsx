@@ -18,10 +18,10 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
   async function loadDashboardData() {
     setLoading(true)
-    const { data: sessionData } = await supabase.from('sessions').select('*').eq('user_id', profile.id).eq('completed', true).order('created_at', { ascending: false })
-    setSessions(sessionData || [])
-    const { data: roadmapData } = await supabase.from('roadmaps').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
-    setRoadmap(roadmapData?.content || null)
+    const { data: sess } = await supabase.from('sessions').select('*').eq('user_id', profile.id).eq('completed', true).order('created_at', { ascending: false })
+    setSessions(sess || [])
+    const { data: road } = await supabase.from('roadmaps').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
+    setRoadmap(road?.content || null)
     setLoading(false)
   }
 
@@ -36,20 +36,16 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         const arrayBuffer = await file.arrayBuffer(); const result = await mammoth.extractRawText({ arrayBuffer }); text = result.value
       } else { alert('PDF/DOCX only'); setAnalyzing(false); return }
+      
       const res = await fetch('/api/analyze-resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resumeText: text }) })
       const data = await res.json()
       if (data.result) {
-        const { summary, skills, recommendedTopics, experienceLevel, suggestedCourses } = data.result
-        const { error: upError } = await supabase.from('profiles').update({ 
+        // Schema-agnostic update using metadata JSONB
+        await supabase.from('profiles').update({ 
           resume_text: text, 
-          suggested_skills: skills, 
-          experience_level: experienceLevel, 
-          metadata: { summary, recommendedTopics, suggestedCourses } 
+          metadata: { ...data.result } 
         }).eq('id', profile.id)
-        
-        if (upError) throw upError
-        alert('Analysis complete and profile updated!'); 
-        window.location.reload()
+        alert('Resume Processed!'); window.location.reload()
       }
     } catch (err) { alert(err.message) } finally { setAnalyzing(false) }
   }
@@ -67,139 +63,99 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
   const avgScore = sessions.length > 0 ? (sessions.reduce((acc, s) => acc + (s.avg_score || 0), 0) / sessions.length).toFixed(1) : '0.0'
   const improveHistory = sessions.flatMap(s => (s.improve_points || []).map(p => ({ text: p, date: new Date(s.created_at).toLocaleDateString(), sessionData: s }))).slice(0, 10)
-  const suggestedCourses = profile?.metadata?.suggestedCourses || []
+  const meta = profile?.metadata || {}
 
-  if (loading) return <div style={s.loading}>Initializing Command Center...</div>
+  if (loading) return <div style={s.loading}>Loading Platform...</div>
 
   return (
     <div style={s.page}>
       <nav style={s.nav}>
-        <div style={s.navBrand}>
-          <div style={s.logo}>DI</div>
-          <span style={s.navTitle}>DevOps Command Center</span>
-        </div>
+        <div style={s.navBrand}><div style={s.logo}>DI</div><span style={s.navTitle}>DevOps Command Center</span></div>
         <div style={s.navRight}>
           <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
-          <div style={s.avatar}>{profile?.full_name?.[0] || 'U'}</div>
+          <div style={s.avatar}>{profile?.full_name?.[0]}</div>
           <span style={s.navName}>{profile?.full_name}</span>
           <button style={s.logoutBtn} onClick={onLogout}>Sign out</button>
         </div>
       </nav>
 
       <div style={s.content}>
+        <div style={s.hero}>
+          <h2 style={s.heroTitle}>Mission Overview: <span style={{ color: 'var(--primary)' }}>{profile?.full_name?.split(' ')[0]}</span></h2>
+          <p style={s.heroSub}>Your technical growth and career roadmap in one view.</p>
+        </div>
+
         <div style={s.grid}>
-          {/* Main Performance & Rank */}
-          <div style={s.leftCol}>
+          <div style={s.left}>
             <div style={s.card}>
-              <div style={s.cardTitle}>Technical Standing</div>
+              <div style={s.cardTitle}>Performance</div>
               <div style={s.statsRow}>
-                <div style={s.statBox}>
-                  <div style={s.statVal}>{avgScore}</div>
-                  <div style={s.statLabel}>AVG SCORE</div>
-                </div>
-                <div style={s.statBox}>
-                  <div style={s.statVal}>{sessions.length}</div>
-                  <div style={s.statLabel}>COMPLETED</div>
-                </div>
+                <div style={s.statBox}><div style={s.statVal}>{avgScore}</div><div style={s.statLabel}>AVG SCORE</div></div>
+                <div style={s.statBox}><div style={s.statVal}>{sessions.length}</div><div style={s.statLabel}>SESSIONS</div></div>
               </div>
             </div>
 
             <div style={{ ...s.card, background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)', color: '#fff' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>CAREER RANK</span>
-                <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', padding: '3px 8px', borderRadius: 4 }}>🔥 {profile.streak || 1} DAYS</span>
-              </div>
-              <div style={{ fontSize: 28, fontWeight: 800 }}>Level {profile.level || 1}</div>
-              <div style={{ fontSize: 12, marginTop: 4, opacity: 0.8 }}>{profile.xp || 0} Total XP</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}><span style={{ fontSize: 11, fontWeight: 800 }}>RANK</span><span>🔥 {profile.streak || 1} DAYS</span></div>
+              <div style={{ fontSize: 28, fontWeight: 900 }}>Lvl {profile.level || 1}</div>
               <div style={s.xpBar}><div style={{ ...s.xpFill, width: `${((profile.xp || 0) % 500) / 5}%` }} /></div>
             </div>
 
             <div style={s.card}>
-              <div style={s.cardTitle}>Improvement Feed</div>
+              <div style={s.cardTitle}>Improvements</div>
               <div style={s.improveList}>
                 {improveHistory.map((item, i) => (
                   <div key={i} style={s.improveItem} onClick={() => onViewReport(item.sessionData)}>
-                    <div>
-                      <div style={s.improveText}>{item.text}</div>
-                      <div style={s.improveDate}>{item.date}</div>
-                    </div>
-                    <span style={{ color: 'var(--primary)', fontWeight: 800 }}>→</span>
+                    <div><div style={s.improveText}>{item.text}</div><div style={s.improveDate}>{item.date}</div></div>
+                    <span>→</span>
                   </div>
                 ))}
-                {improveHistory.length === 0 && <p style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', padding: '1rem 0' }}>No data yet. Start your first session.</p>}
               </div>
             </div>
           </div>
 
-          {/* Roadmap & Profile */}
-          <div style={s.rightCol}>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-              <button style={{ ...s.startBtn, flex: 2, marginBottom: 0 }} onClick={onStartSession}>🚀 Start New Interview</button>
-              <button style={{ ...s.reuploadBtn, flex: 1 }} onClick={() => document.getElementById('res-up').click()}>
-                {analyzing ? '⏳' : '🔄'} Update Resume
-              </button>
+          <div style={s.right}>
+            <div style={{ display: 'flex', gap: 15, marginBottom: 20 }}>
+              <button style={{ ...s.startBtn, flex: 1, margin: 0 }} onClick={onStartSession}>🚀 Start Interview</button>
+              <button style={s.reBtn} onClick={() => document.getElementById('res-up').click()}>{analyzing ? '⏳' : '🔄'} Update Resume</button>
             </div>
 
             <div style={s.card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <div style={s.cardTitle}>Dynamic Roadmap</div>
-                <button style={s.ghostBtn} onClick={handleGenerateRoadmap} disabled={generating}>{generating ? '...' : 'Refresh'}</button>
-              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}><div style={s.cardTitle}>Roadmap</div><button style={s.ghostBtn} onClick={handleGenerateRoadmap}>REFRESH</button></div>
               {roadmap ? (
-                <div style={s.roadmapStack}>
-                  {roadmap.focus && <div style={s.roadmapFocus}><strong>Focus:</strong> {roadmap.focus}</div>}
-                  <div style={s.roadmapScroll}>
-                    {roadmap.days.map((d, i) => (
-                      <div key={i} style={s.roadmapDay}>
-                        <div style={s.dayTitle}>{d.day}</div>
-                        {d.tasks.map((t, ti) => (
-                          <div key={ti} style={s.taskItem}>
-                            <div style={s.taskName}>{t.title}</div>
-                            <div style={s.taskMeta}>
-                              <span style={s.taskDur}>{t.duration}</span>
-                              {t.resourceLink && <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.taskLink}>RESOURCE</a>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+                <div style={s.roadmapScroll}>
+                  {roadmap.days.map((d, i) => (
+                    <div key={i} style={s.roadmapDay}>
+                      <div style={s.dayTitle}>{d.day}</div>
+                      {d.tasks.map((t, ti) => (
+                        <div key={ti} style={s.taskItem}>
+                          <div style={s.taskName}>{t.title}</div>
+                          <div style={s.taskMeta}><span>{t.duration}</span> {t.resourceLink && <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.taskLink}>RESOURCE</a>}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
                 </div>
-              ) : <p style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>Upload your resume to generate a plan.</p>}
+              ) : <p style={s.empty}>No active roadmap.</p>}
             </div>
 
             <div style={s.card}>
-              <div style={s.cardTitle}>Career Profile Analysis</div>
-              {profile?.metadata?.summary ? (
-                <div>
-                  <div style={s.profileSummary}>{profile.metadata.summary}</div>
-                  <div style={s.profileMeta}>
-                    <span style={s.profileBadge}>Target: {profile.experience_level || 'General'}</span>
-                  </div>
-                  <div style={s.skillGrid}>
-                    {profile.suggested_skills?.slice(0, 12).map((sk, i) => (
-                      <span key={i} style={s.skillTag}>{sk}</span>
-                    ))}
+              <div style={s.cardTitle}>AI Career Profile</div>
+              {meta.summary ? (
+                <div style={s.profileBody}>
+                  <div style={s.profileSummary}>"{meta.summary}"</div>
+                  <div style={s.metaGrid}>
+                    <div style={s.metaItem}><span style={s.metaLabel}>TARGET</span><span style={s.metaVal}>{meta.experienceLevel}</span></div>
+                    <div style={s.metaItem}><span style={s.metaLabel}>SKILLS</span><div style={s.skillGrid}>{meta.skills?.slice(0, 10).map((sk, i) => <span key={i} style={s.skill}>{sk}</span>)}</div></div>
                   </div>
                 </div>
               ) : (
-                <div style={s.dropzone}>
-                  <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} style={{ display: 'none' }} id="res-up" />
-                  <label htmlFor="res-up" style={{ cursor: 'pointer' }}>
-                    <div style={{ fontSize: 32, marginBottom: 12 }}>📁</div>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>Upload Resume for AI Analysis</div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>Identify skills gaps and generate a roadmap</div>
-                  </label>
-                </div>
-              )}
-              {suggestedCourses.length > 0 && (
-                <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase' }}>Recommended Tech Stacks</div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {suggestedCourses.map((c, i) => <span key={i} style={s.courseTag}>{c}</span>)}
-                  </div>
+                <div style={s.dropzone} onClick={() => document.getElementById('res-up').click()}>
+                  <div style={{ fontSize: 32 }}>📁</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, marginTop: 10 }}>Process Resume</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 5 }}>Click to upload and analyze your background.</div>
                 </div>
               )}
             </div>
@@ -215,48 +171,50 @@ const s = {
   page:         { minHeight: '100vh', background: 'var(--bg)', width: '100%' },
   nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
   navBrand:     { display: 'flex', alignItems: 'center', gap: 10 },
-  logo:         { width: 36, height: 36, background: 'var(--primary)', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 14 },
+  logo:         { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
   navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
-  navRight:     { display: 'flex', alignItems: 'center', gap: 16 },
-  themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer' },
-  avatar:       { width: 34, height: 34, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 14 },
-  navName:      { fontSize: 14, fontWeight: 700, color: 'var(--text2)' },
-  logoutBtn:    { padding: '6px 14px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--red)', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
-  content:      { padding: '2rem' },
-  grid:         { display: 'grid', gridTemplateColumns: '380px 1fr', gap: '2rem' },
-  leftCol:      { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-  rightCol:     { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+  navRight:     { display: 'flex', alignItems: 'center', gap: 15 },
+  themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
+  avatar:       { width: 32, height: 32, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 12 },
+  navName:      { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
+  logoutBtn:    { padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', color: 'var(--red)', fontSize: 11, fontWeight: 700 },
+  content:      { padding: '2rem 4rem', maxWidth: 1600, margin: '0 auto' },
+  hero:         { marginBottom: '2.5rem' },
+  heroTitle:    { fontSize: 32, fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.02em' },
+  heroSub:      { fontSize: 15, color: 'var(--muted)', marginTop: 5, fontWeight: 500 },
+  grid:         { display: 'grid', gridTemplateColumns: '360px 1fr', gap: '2rem' },
+  left:         { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+  right:        { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
   card:         { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', boxShadow: 'var(--shadow)' },
-  cardTitle:    { fontSize: 12, fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 },
-  statsRow:     { display: 'flex', justifyContent: 'space-around', textAlign: 'center' },
+  cardTitle:    { fontSize: 10, fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' },
+  statsRow:     { display: 'flex', marginTop: 15, textAlign: 'center' },
   statBox:      { flex: 1 },
-  statVal:      { fontSize: 36, fontWeight: 900, color: 'var(--text)', fontFamily: 'JetBrains Mono,monospace' },
-  statLabel:    { fontSize: 10, fontWeight: 800, color: 'var(--muted)', marginTop: 8 },
-  xpBar:        { height: 8, background: 'rgba(255,255,255,0.2)', borderRadius: 4, marginTop: 16, overflow: 'hidden' },
-  xpFill:       { height: '100%', background: '#fff', boxShadow: '0 0 10px rgba(255,255,255,0.5)' },
-  improveList:  { display: 'flex', flexDirection: 'column', gap: 10 },
-  improveItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--surface2)', borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s' },
-  improveText:  { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
-  improveDate:  { fontSize: 10, color: 'var(--muted)', marginTop: 4 },
-  startBtn:     { width: '100%', padding: '18px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 14, fontSize: 16, fontWeight: 900, cursor: 'pointer', marginBottom: '1.5rem', boxShadow: '0 8px 20px var(--primary-glow)' },
-  reuploadBtn:  { padding: '12px', border: '1.5px solid var(--border)', borderRadius: 12, background: 'var(--surface)', fontSize: 13, fontWeight: 700, cursor: 'pointer', color: 'var(--text2)' },
-  roadmapStack: { display: 'flex', flexDirection: 'column', gap: 16 },
-  roadmapFocus: { fontSize: 14, color: 'var(--primary)', background: 'var(--primary-l)', padding: '10px 14px', borderRadius: 10, marginBottom: 10 },
-  roadmapScroll: { display: 'flex', gap: '1.5rem', overflowX: 'auto', paddingBottom: '1rem' },
-  roadmapDay:   { minWidth: 220, borderLeft: '3px solid var(--primary-l)', paddingLeft: 16 },
-  dayTitle:     { fontSize: 11, fontWeight: 900, color: 'var(--primary)', marginBottom: 12, textTransform: 'uppercase' },
-  taskItem:     { marginBottom: 12, background: 'var(--surface2)', padding: '10px', borderRadius: 10 },
-  taskName:     { fontSize: 12, fontWeight: 800, color: 'var(--text2)', marginBottom: 4 },
-  taskMeta:     { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  taskDur:      { fontSize: 10, color: 'var(--muted)', fontWeight: 600 },
-  taskLink:     { fontSize: 9, color: 'var(--primary)', fontWeight: 900, textDecoration: 'none' },
-  dropzone:     { border: '2px dashed var(--border2)', borderRadius: 16, padding: '3rem 2rem', textAlign: 'center', background: 'var(--surface2)', transition: 'all 0.2s' },
-  profileSummary: { fontSize: 14, color: 'var(--text2)', lineHeight: 1.7, marginBottom: 16, fontStyle: 'italic' },
-  profileMeta:    { display: 'flex', gap: 10, marginBottom: 16 },
-  profileBadge:   { fontSize: 11, fontWeight: 800, background: 'var(--primary-l)', padding: '4px 10px', borderRadius: 6, color: 'var(--primary)' },
-  skillGrid:      { display: 'flex', flexWrap: 'wrap', gap: 8 },
-  skillTag:       { fontSize: 11, fontWeight: 700, background: 'var(--surface2)', border: '1px solid var(--border)', padding: '5px 12px', borderRadius: 8, color: 'var(--text2)' },
-  courseTag:    { fontSize: 10, fontWeight: 800, background: 'var(--primary-l)', color: 'var(--primary)', padding: '6px 12px', borderRadius: 8, textTransform: 'uppercase' },
-  loading:      { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: 'var(--muted)', fontWeight: 800, background: 'var(--bg)' },
-  ghostBtn:     { background: 'none', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8, fontSize: 10, fontWeight: 800, color: 'var(--muted)' }
+  statVal:      { fontSize: 32, fontWeight: 950, color: 'var(--text)', fontFamily: 'JetBrains Mono,monospace' },
+  statLabel:    { fontSize: 9, fontWeight: 800, color: 'var(--muted)' },
+  xpBar:        { height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 15, overflow: 'hidden' },
+  xpFill:       { height: '100%', background: '#fff' },
+  improveList:  { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 15 },
+  improveItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, cursor: 'pointer' },
+  improveText:  { fontSize: 12, fontWeight: 700, color: 'var(--text2)' },
+  improveDate:  { fontSize: 9, color: 'var(--muted)', marginTop: 3 },
+  startBtn:     { padding: '20px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 16, fontWeight: 950, boxShadow: '0 8px 20px var(--primary-glow)' },
+  reBtn:        { padding: '10px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, fontWeight: 800 },
+  roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem' },
+  roadmapDay:   { minWidth: 200, borderLeft: '2px solid var(--primary-l)', paddingLeft: 14 },
+  dayTitle:     { fontSize: 10, fontWeight: 900, color: 'var(--primary)', marginBottom: 10, textTransform: 'uppercase' },
+  taskItem:     { background: 'var(--surface2)', padding: '10px', borderRadius: 8, marginBottom: 8 },
+  taskName:     { fontSize: 11, fontWeight: 800, color: 'var(--text2)' },
+  taskMeta:     { display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 700, marginTop: 4 },
+  taskLink:     { color: 'var(--primary)', textDecoration: 'none' },
+  profileBody:  { marginTop: 15 },
+  profileSummary: { fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, fontStyle: 'italic', marginBottom: 15 },
+  metaItem:     { marginBottom: 15 },
+  metaLabel:    { fontSize: 9, fontWeight: 900, color: 'var(--muted)', display: 'block', marginBottom: 5 },
+  metaVal:      { fontSize: 12, fontWeight: 800, color: 'var(--primary)' },
+  skillGrid:    { display: 'flex', flexWrap: 'wrap', gap: 6 },
+  skill:        { fontSize: 10, fontWeight: 700, background: 'var(--surface2)', padding: '4px 10px', borderRadius: 6 },
+  dropzone:     { border: '1.5px dashed var(--border2)', borderRadius: 12, padding: '2rem', textAlign: 'center', background: 'var(--surface2)', cursor: 'pointer' },
+  loading:      { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'var(--muted)', background: 'var(--bg)' },
+  ghostBtn:     { background: 'none', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 6, fontSize: 9, fontWeight: 800, color: 'var(--muted)' },
+  empty:        { textAlign: 'center', padding: '1rem', color: 'var(--muted)', fontSize: 12 }
 }
