@@ -21,8 +21,6 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
     try {
       const { data: sess } = await supabase.from('sessions').select('*').eq('user_id', profile.id).eq('completed', true).order('created_at', { ascending: false })
       setSessions(sess || [])
-      
-      // Safety check for roadmaps table
       const { data: road, error: roadError } = await supabase.from('roadmaps').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
       if (!roadError) setRoadmap(road?.content || null)
     } catch (err) {
@@ -65,7 +63,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
         if (error) alert('Error: "roadmaps" table not found in your Supabase project.')
         else setRoadmap(data.result)
       }
-    } catch (err) { console.error(err) } finally { setGenerating(false) }
+    } catch (err) { alert(err.message) } finally { setGenerating(false) }
   }
 
   const avgScore = sessions.length > 0 ? (sessions.reduce((acc, s) => acc + (s.avg_score || 0), 0) / sessions.length).toFixed(1) : '0.0'
@@ -125,7 +123,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
           <div style={s.right}>
             <div style={{ display: 'flex', gap: 15, marginBottom: 20 }}>
-              <button style={{ ...s.startBtn, flex: 1, margin: 0 }} onClick={() => onStartSession()}>🚀 Start Interview</button>
+              <button style={{ ...s.startBtn, flex: 2, margin: 0 }} onClick={() => onStartSession()}>🚀 Start Interview</button>
               <button style={s.reBtn} onClick={() => document.getElementById('res-up').click()}>{analyzing ? '⏳' : '🔄'} Update Resume</button>
             </div>
 
@@ -141,9 +139,9 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
                           <div style={s.taskName}>{t.title}</div>
                           <div style={s.taskMeta}><span>{t.duration}</span> {t.resourceLink && <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.taskLink}>RESOURCE</a>}</div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ))}
                 </div>
               ) : <p style={s.empty}>No active roadmap.</p>}
             </div>
