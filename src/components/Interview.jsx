@@ -51,6 +51,7 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
   const [timeLeft,  setTimeLeft]  = useState(timeTarget * 60)
   const [status,    setStatus]    = useState('') 
   const [intro,     setIntro]     = useState(true)
+  const [inputMode, setInputMode] = useState((interviewType === 'coding' || interviewType === 'surprise') ? 'editor' : (mode || 'text'))
 
   const recognitionRef = useRef(null)
   const timerRef       = useRef(null)
@@ -71,7 +72,11 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
   }, [])
 
   useEffect(() => {
-    const introText = `Hello ${profile.full_name.split(' ')[0]}, I'm ${INTERVIEWER_NAME}. Let's conduct your ${interviewType} screen.`
+    const name = profile.full_name.split(' ')[0]
+    const introText = interviewType === 'surprise'
+      ? `Hello ${name}, I'm ${INTERVIEWER_NAME}. This is a surprise simulation. I'll pull from any technical or leadership domain at high difficulty. Let's see what you've got.`
+      : `Hello ${name}, I'm ${INTERVIEWER_NAME}. Let's conduct your ${interviewType} screen at a ${level.tag} level.`
+
     if (mode === 'voice') {
       setSpeaking(true)
       speak(introText, () => {
