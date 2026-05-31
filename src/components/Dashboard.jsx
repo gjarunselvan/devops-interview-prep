@@ -158,20 +158,41 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
               ) : <p style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center' }}>No roadmap generated.</p>}
             </div>
 
-            {/* Resume */}
+            {/* Resume / Profile Analysis */}
             <div style={s.card}>
-              <div style={s.cardTitle}>Resume Analysis</div>
-              <div style={s.dropzone}>
-                <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} style={{ display: 'none' }} id="res-up" />
-                <label htmlFor="res-up" style={{ cursor: 'pointer' }}>
-                  <div style={{ fontSize: 24, marginBottom: 8 }}>{analyzing ? '⏳' : '📁'}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>{analyzing ? 'Analyzing...' : 'Update Resume'}</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Tailor your roadmap to your skills</div>
-                </label>
-              </div>
+              <div style={s.cardTitle}>Career Profile</div>
+              {profile?.metadata?.summary ? (
+                <div>
+                  <div style={s.profileSummary}>{profile.metadata.summary}</div>
+                  <div style={s.profileMeta}>
+                    <span style={s.profileBadge}>Target: {profile.experience_level || 'General'}</span>
+                  </div>
+                  <div style={s.skillGrid}>
+                    {profile.suggested_skills?.slice(0, 6).map((sk, i) => (
+                      <span key={i} style={s.skillTag}>{sk}</span>
+                    ))}
+                  </div>
+                  <button style={s.reuploadBtn} onClick={() => document.getElementById('res-up').click()}>
+                    {analyzing ? '⏳ Analyzing...' : '🔄 Update Resume'}
+                  </button>
+                  <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} style={{ display: 'none' }} id="res-up" />
+                </div>
+              ) : (
+                <div style={s.dropzone}>
+                  <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} style={{ display: 'none' }} id="res-up" />
+                  <label htmlFor="res-up" style={{ cursor: 'pointer' }}>
+                    <div style={{ fontSize: 24, marginBottom: 8 }}>{analyzing ? '⏳' : '📁'}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>{analyzing ? 'Analyzing...' : 'Upload Resume'}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Get a tailored roadmap based on your skills</div>
+                  </label>
+                </div>
+              )}
               {suggestedCourses.length > 0 && (
-                <div style={{ marginTop: 16, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {suggestedCourses.slice(0, 3).map((c, i) => <span key={i} style={s.courseTag}>{c}</span>)}
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', marginBottom: 8 }}>RECOMMENDED LEARNING</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {suggestedCourses.slice(0, 3).map((c, i) => <span key={i} style={s.courseTag}>{c}</span>)}
+                  </div>
                 </div>
               )}
             </div>
@@ -219,6 +240,12 @@ const s = {
   taskLink:     { fontSize: 11, color: 'var(--primary)', fontWeight: 700 },
   dropzone:     { border: '1.5px dashed var(--border2)', borderRadius: 10, padding: '1.5rem', textAlign: 'center', background: 'var(--surface2)' },
   courseTag:    { fontSize: 10, fontWeight: 700, background: 'var(--primary-l)', color: 'var(--primary)', padding: '4px 10px', borderRadius: 5 },
+  profileSummary: { fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 12 },
+  profileMeta:    { display: 'flex', gap: 8, marginBottom: 12 },
+  profileBadge:   { fontSize: 10, fontWeight: 800, background: 'var(--surface2)', border: '1px solid var(--border)', padding: '3px 8px', borderRadius: 4, color: 'var(--primary)' },
+  skillGrid:      { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 },
+  skillTag:       { fontSize: 10, fontWeight: 600, background: 'var(--bg)', border: '1px solid var(--border)', padding: '3px 8px', borderRadius: 4, color: 'var(--muted)' },
+  reuploadBtn:    { width: '100%', padding: '10px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: 'var(--muted)' },
   loading:      { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--muted)', fontWeight: 600 },
   ghostBtn:     { background: 'none', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }
 }
