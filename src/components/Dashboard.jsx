@@ -33,9 +33,7 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       setSessions(sess || [])
       const { data: road, error: roadError } = await supabase.from('roadmaps').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
       if (!roadError) setRoadmap(road?.content || null)
-    } catch (err) {
-      console.warn('Dashboard fetch warning:', err.message)
-    }
+    } catch (err) { console.warn(err.message) }
     setLoading(false)
   }
 
@@ -67,9 +65,8 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       const res = await fetch('/api/roadmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile, recentSessions: sessions.slice(0, 3), studyTimePref: profile.study_daily_mins || 60 }) })
       const data = await res.json()
       if (data.result) {
-        const { error } = await supabase.from('roadmaps').insert({ user_id: profile.id, content: data.result })
-        if (error) alert('Error: "roadmaps" table error.')
-        else setRoadmap(data.result)
+        await supabase.from('roadmaps').insert({ user_id: profile.id, content: data.result })
+        setRoadmap(data.result)
       }
     } catch (err) { console.error(err) } finally { setGenerating(false) }
   }
@@ -86,31 +83,33 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
   const improveHistory = sessions.flatMap(s => (s.improve_points || []).map(p => ({ text: p, date: new Date(s.created_at).toLocaleDateString(), sessionData: s }))).slice(0, 10)
   const meta = profile?.metadata || {}
 
-  if (loading) return <div style={s.loading}>Synchronizing Dashboard...</div>
+  if (loading) return <div style={s.loading}>Initializing Dashboard...</div>
 
   return (
     <div style={s.page}>
+      {/* MOBILE OPTIMIZED NAV */}
       <nav style={s.nav}>
-        <div style={s.navBrand}><div style={s.logo}>DI</div>{!isMobile && <span style={s.navTitle}>Command Center</span>}</div>
+        <div style={s.navBrand}><div style={s.logo}>DI</div>{!isMobile && <span style={s.navTitle}>DevOps Platform</span>}</div>
         <div style={s.navRight}>
-          <button style={s.navLinkBtn} onClick={() => window.location.reload()}>🏠 {isMobile ? '' : 'Dashboard'}</button>
           <button style={s.themeToggle} onClick={() => onPersonalize(theme === 'light' ? 'dark' : 'light', bgColor)}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
           <div style={s.avatar}>{profile?.full_name?.[0]}</div>
-          {!isMobile && <span style={s.navName}>{profile?.full_name}</span>}
-          <button style={s.logoutBtn} onClick={onLogout}>{isMobile ? 'Exit' : 'Sign out'}</button>
+          <button style={s.logoutBtn} onClick={onLogout}>{isMobile ? 'EXIT' : 'SIGN OUT'}</button>
         </div>
       </nav>
 
-      <div style={s.content}>
+      <div style={s.container}>
         <div style={s.hero}>
-          <h2 style={s.heroTitle}>Mission Overview: <span style={{ color: 'var(--primary)' }}>{profile?.full_name?.split(' ')[0]}</span></h2>
-          <p style={s.heroSub}>Your technical growth and career roadmap in one view.</p>
+          <h2 style={s.heroTitle}>Mission: <span style={{ color: 'var(--primary)' }}>{profile?.full_name?.split(' ')[0]}</span></h2>
+          <p style={s.heroSub}>Your technical growth and career roadmap.</p>
         </div>
 
+        {/* FULL WIDTH STACK FOR MOBILE, GRID FOR DESKTOP */}
         <div style={{ ...s.grid, gridTemplateColumns: isMobile ? '1fr' : '360px 1fr' }}>
-          <div style={s.left}>
+          
+          {/* SIDEBAR / LEFT PANEL */}
+          <div style={s.leftStack}>
             <div style={s.card}>
               <div style={s.cardTitle}>Performance</div>
               <div style={s.statsRow}>
@@ -119,77 +118,74 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
               </div>
             </div>
 
-            <div style={{ ...s.card, background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)', color: '#fff' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}><span style={{ fontSize: 11, fontWeight: 800 }}>RANK</span><span>🔥 {profile.streak || 1} DAYS</span></div>
-              <div style={{ fontSize: 28, fontWeight: 900 }}>Lvl {meta.level || 1}</div>
+            <div style={{ ...s.card, background: 'linear-gradient(135deg, var(--primary) 0%, #1e3a5f 100%)', color: '#fff', border: 'none' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}><span style={{ fontSize: 10, fontWeight: 900 }}>LEVEL PROGRESS</span><span>🔥 {profile.streak || 1} DAYS</span></div>
+              <div style={{ fontSize: 28, fontWeight: 900 }}>Rank {meta.level || 1}</div>
               <div style={s.xpBar}><div style={{ ...s.xpFill, width: `${((meta.xp || 0) % 500) / 5}%` }} /></div>
             </div>
 
             <div style={s.card}>
               <div style={s.cardTitle}>Session History</div>
-              <div style={s.improveList}>
+              <div style={s.historyList}>
                 {improveHistory.length > 0 ? improveHistory.map((item, i) => (
-                  <div key={i} style={s.improveItem} onClick={() => onViewReport(item.sessionData)}>
+                  <div key={i} style={s.historyItem} onClick={() => onViewReport(item.sessionData)}>
                     <div style={{ flex: 1 }}>
-                      <div style={s.improveText}>{item.text}</div>
-                      <div style={s.improveDate}>{item.date}</div>
+                      <div style={s.historyText}>{item.text}</div>
+                      <div style={s.historyDate}>{item.date}</div>
                     </div>
-                    <span>→</span>
+                    <span style={{ color: 'var(--primary)', fontWeight: 900 }}>→</span>
                   </div>
-                )) : <p style={s.empty}>No session history yet.</p>}
+                )) : <p style={s.emptyText}>No activity recorded.</p>}
               </div>
             </div>
           </div>
 
-          <div style={s.right}>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexDirection: isMobile ? 'column' : 'row' }}>
-              <button style={{ ...s.startBtn, flex: 2, margin: 0 }} onClick={() => onStartSession()}>🚀 Start Interview</button>
-              <button style={{ ...s.reBtn, width: isMobile ? '100%' : 'auto' }} onClick={() => document.getElementById('res-up').click()}>{analyzing ? '⏳' : '🔄'} Update Resume</button>
+          {/* MAIN CONTENT / RIGHT PANEL */}
+          <div style={s.rightStack}>
+            <div style={s.actionRow}>
+              <button style={s.mainAction} onClick={() => onStartSession()}>🚀 INITIALIZE SIMULATION</button>
+              <button style={s.subAction} onClick={() => document.getElementById('res-up').click()}>{analyzing ? '⏳' : '🔄 UPDATE RESUME'}</button>
             </div>
 
             <div style={s.card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}><div style={s.cardTitle}>Roadmap</div><button style={s.ghostBtn} onClick={handleGenerateRoadmap}>{generating ? '...' : 'REFRESH'}</button></div>
+              <div style={s.cardHeader}><div style={s.cardTitle}>Study Roadmap</div><button style={s.ghostBtn} onClick={handleGenerateRoadmap}>{generating ? '...' : 'REFRESH'}</button></div>
               {roadmap ? (
                 <div style={s.roadmapScroll}>
                   {roadmap.days.map((d, di) => (
                     <div key={di} style={s.roadmapDay}>
                       <div style={s.dayTitle}>{d.day}</div>
                       {d.tasks.map((t, ti) => (
-                        <div key={ti} style={{ ...s.taskItem, opacity: t.completed ? 0.6 : 1, background: t.completed ? 'var(--bg)' : 'var(--surface2)' }}>
-                          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                            <input type="checkbox" checked={!!t.completed} onChange={() => toggleTaskCompletion(di, ti)} style={s.checkbox} />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ ...s.taskName, textDecoration: t.completed ? 'line-through' : 'none' }}>{t.title}</div>
-                              <div style={s.taskMeta}><span>{t.duration}</span> {t.resourceLink && <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.taskLink}>VIDEO →</a>}</div>
-                            </div>
+                        <div key={ti} style={{ ...s.taskItem, opacity: t.completed ? 0.6 : 1 }}>
+                          <input type="checkbox" checked={!!t.completed} onChange={() => toggleTaskCompletion(di, ti)} style={s.checkbox} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ ...s.taskName, textDecoration: t.completed ? 'line-through' : 'none' }}>{t.title}</div>
+                            <div style={s.taskMeta}><span>{t.duration}</span> {t.resourceLink && <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.taskLink}>VIDEO →</a>}</div>
                           </div>
                         </div>
                       ))}
                     </div>
                   ))}
                 </div>
-              ) : <p style={s.empty}>No active roadmap.</p>}
+              ) : <p style={s.emptyText}>Click refresh to generate a custom 7-day plan.</p>}
             </div>
 
             <div style={s.card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={s.cardHeader}>
                 <div style={s.cardTitle}>Technical Identity</div>
                 {meta.experienceLevel && <span style={s.proBadge}>{meta.experienceLevel.toUpperCase()}</span>}
               </div>
-              
               {meta.summary ? (
-                <div style={s.proProfile}>
+                <div style={s.profileBody}>
                   <div style={s.summaryBox}>
-                    <span style={s.quoteMark}>“</span>
-                    <p style={s.proSummary}>{meta.summary}</p>
+                    <span style={s.quote}>“</span>
+                    <p style={s.summaryText}>{meta.summary}</p>
                   </div>
-                  
-                  <div style={{ marginTop: 24 }}>
-                    <div style={s.smallLabel}>CORE TECH STACK</div>
-                    <div style={s.skillCloud}>
-                      {meta.skills?.slice(0, 15).map((sk, i) => (
-                        <div key={i} style={s.proSkill}>
-                          <span style={{ fontSize: 16 }}>{SKILL_ICONS[sk] || SKILL_ICONS[sk.split(' ')[0]] || '🛠️'}</span>
+                  <div style={{ marginTop: 20 }}>
+                    <div style={s.smallLabel}>CORE STACK</div>
+                    <div style={s.skillGrid}>
+                      {meta.skills?.slice(0, 12).map((sk, i) => (
+                        <div key={i} style={s.skillPill}>
+                          <span>{SKILL_ICONS[sk] || SKILL_ICONS[sk.split(' ')[0]] || '🛠️'}</span>
                           {sk}
                         </div>
                       ))}
@@ -198,9 +194,9 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
                 </div>
               ) : (
                 <div style={s.dropzone} onClick={() => document.getElementById('res-up').click()}>
-                  <div style={{ fontSize: 40, marginBottom: 16 }}>📄</div>
-                  <div style={{ fontSize: 16, fontWeight: 850 }}>Initialize Career Analysis</div>
-                  <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8, maxWidth: 280, margin: '8px auto 0' }}>Upload your resume to calibrate the AI interviewer and build your technical identity.</p>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>📄</div>
+                  <div style={{ fontWeight: 800 }}>Upload Resume</div>
+                  <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Calibrate your AI interviewer.</p>
                 </div>
               )}
             </div>
@@ -213,56 +209,65 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 }
 
 const s = {
-  page:         { minHeight: '100vh', background: 'var(--bg)', width: '100%' },
+  page:         { minHeight: '100vh', background: 'var(--bg)', width: '100%', overflowX: 'hidden' },
   nav:          { background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 1rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
   navBrand:     { display: 'flex', alignItems: 'center', gap: 10 },
-  logo:         { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
+  logo:         { width: 34, height: 34, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 14 },
   navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
   navRight:     { display: 'flex', alignItems: 'center', gap: 10 },
-  navLinkBtn:   { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: 'var(--text2)' },
-  themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
-  avatar:       { width: 32, height: 32, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 12 },
-  navName:      { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
-  logoutBtn:    { padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', color: 'var(--red)', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
-  content:      { padding: '2rem 1rem', maxWidth: 1600, margin: '0 auto' },
-  hero:         { marginBottom: '2.5rem' },
-  heroTitle:    { fontSize: 'clamp(24px, 5vw, 32px)', fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.02em' },
-  heroSub:      { fontSize: 14, color: 'var(--muted)', marginTop: 5, fontWeight: 500 },
+  themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 36, height: 36, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
+  avatar:       { width: 34, height: 34, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 14 },
+  logoutBtn:    { padding: '6px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11, fontWeight: 800, color: 'var(--red)', cursor: 'pointer' },
+  
+  container:    { padding: '1.5rem 1rem', maxWidth: 1600, margin: '0 auto' },
+  hero:         { marginBottom: '2rem' },
+  heroTitle:    { fontSize: 'clamp(24px, 6vw, 36px)', fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.03em' },
+  heroSub:      { fontSize: 14, color: 'var(--muted)', fontWeight: 500, marginTop: 4 },
+  
   grid:         { display: 'grid', gap: '1.5rem' },
-  left:         { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-  right:        { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-  card:         { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', boxShadow: 'var(--shadow)' },
-  cardTitle:    { fontSize: 10, fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' },
+  leftStack:    { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+  rightStack:   { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+  
+  card:         { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.25rem', boxShadow: 'var(--shadow)' },
+  cardHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  cardTitle:    { fontSize: 10, fontWeight: 950, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' },
+  
   statsRow:     { display: 'flex', marginTop: 15, textAlign: 'center' },
   statBox:      { flex: 1 },
-  statVal:      { fontSize: 28, fontWeight: 950, color: 'var(--text)', fontFamily: 'JetBrains Mono,monospace' },
+  statVal:      { fontSize: 32, fontWeight: 950, color: 'var(--text)', fontFamily: 'JetBrains Mono,monospace' },
   statLabel:    { fontSize: 9, fontWeight: 800, color: 'var(--muted)' },
-  xpBar:        { height: 6, background: 'rgba(255,255,255,0.15)', borderRadius: 3, marginTop: 15, overflow: 'hidden' },
-  xpFill:       { height: '100%', background: 'var(--primary)' },
-  improveList:  { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 15 },
-  improveItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, cursor: 'pointer' },
-  improveText:  { fontSize: 12, fontWeight: 700, color: 'var(--text2)' },
-  improveDate:  { fontSize: 9, color: 'var(--muted)', marginTop: 3 },
-  startBtn:     { padding: '16px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 15, fontWeight: 950, boxShadow: '0 8px 20px var(--primary-glow)', cursor: 'pointer' },
-  reBtn:        { padding: '10px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)' },
-  roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '1rem' },
-  roadmapDay:   { minWidth: 220, borderLeft: '2px solid var(--primary-l)', paddingLeft: 14 },
-  dayTitle:     { fontSize: 10, fontWeight: 900, color: 'var(--primary)', marginBottom: 10, textTransform: 'uppercase' },
-  taskItem:     { background: 'var(--surface2)', padding: '10px', borderRadius: 8, marginBottom: 8, transition: 'all 0.2s' },
-  taskName:     { fontSize: 11, fontWeight: 800, color: 'var(--text2)' },
-  taskMeta:     { display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 700, marginTop: 4 },
-  taskLink:     { color: 'var(--primary)', textDecoration: 'none', fontWeight: 900 },
-  checkbox:     { width: 14, height: 14, marginTop: 2, cursor: 'pointer' },
-  proBadge:     { padding: '4px 12px', background: 'var(--primary-l)', color: 'var(--primary)', borderRadius: 20, fontSize: 10, fontWeight: 900, letterSpacing: '0.05em' },
-  proProfile:   { marginTop: 10 },
-  summaryBox:   { background: 'var(--surface2)', padding: '1.25rem', borderRadius: 12, position: 'relative', borderLeft: '4px solid var(--primary)' },
-  quoteMark:    { position: 'absolute', top: 10, left: 10, fontSize: 40, color: 'var(--primary)', opacity: 0.1, fontFamily: 'serif' },
-  proSummary:   { fontSize: 13, color: 'var(--text2)', lineHeight: 1.7, fontStyle: 'italic', position: 'relative', zIndex: 1 },
-  smallLabel:   { fontSize: 9, fontWeight: 900, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 12 },
-  skillCloud:   { display: 'flex', flexWrap: 'wrap', gap: 8 },
-  proSkill:     { background: 'var(--surface)', border: '1px solid var(--border)', padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, boxShadow: 'var(--shadow)' },
-  dropzone:     { border: '1.5px dashed var(--border2)', borderRadius: 12, padding: '2rem', textAlign: 'center', background: 'var(--surface2)', cursor: 'pointer' },
+  
+  xpBar:        { height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 15, overflow: 'hidden' },
+  xpFill:       { height: '100%', background: '#fff' },
+  
+  historyList:  { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 15 },
+  historyItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--surface2)', borderRadius: 10, border: '1px solid var(--border)', cursor: 'pointer' },
+  historyText:  { fontSize: 12, fontWeight: 700, color: 'var(--text2)' },
+  historyDate:  { fontSize: 9, color: 'var(--muted)', marginTop: 2 },
+  
+  actionRow:    { display: 'flex', gap: 12, flexWrap: 'wrap' },
+  mainAction:   { flex: 1, minWidth: 200, padding: '18px', background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 15, fontWeight: 900, boxShadow: '0 8px 20px var(--primary-glow)' },
+  subAction:    { padding: '12px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 12, fontWeight: 800, color: 'var(--text2)' },
+  
+  roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '1rem', scrollSnapType: 'x mandatory' },
+  roadmapDay:   { minWidth: 260, background: 'var(--surface2)', borderRadius: 14, padding: '1rem', border: '1px solid var(--border)', scrollSnapAlign: 'start' },
+  dayTitle:     { fontSize: 11, fontWeight: 900, color: 'var(--primary)', marginBottom: 12, textTransform: 'uppercase' },
+  taskItem:     { background: 'var(--surface)', padding: '10px', borderRadius: 10, marginBottom: 8, display: 'flex', gap: 10, alignItems: 'flex-start', border: '1px solid var(--border)' },
+  taskName:     { fontSize: 12, fontWeight: 800, color: 'var(--text2)' },
+  taskMeta:     { display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700, marginTop: 4 },
+  taskLink:     { color: 'var(--primary)', textDecoration: 'none' },
+  checkbox:     { width: 16, height: 16, marginTop: 2 },
+  
+  proBadge:     { padding: '4px 10px', background: 'var(--primary-l)', color: 'var(--primary)', borderRadius: 8, fontSize: 10, fontWeight: 900 },
+  summaryBox:   { background: 'var(--surface2)', padding: '1.25rem', borderRadius: 14, borderLeft: '4px solid var(--primary)', position: 'relative' },
+  quote:        { position: 'absolute', top: 5, left: 10, fontSize: 32, color: 'var(--primary)', opacity: 0.1, fontFamily: 'serif' },
+  summaryText:  { fontSize: 14, color: 'var(--text2)', lineHeight: 1.6, fontStyle: 'italic' },
+  smallLabel:   { fontSize: 10, fontWeight: 900, color: 'var(--muted)', marginBottom: 10, textTransform: 'uppercase' },
+  skillGrid:    { display: 'flex', flexWrap: 'wrap', gap: 8 },
+  skillPill:    { background: 'var(--surface)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 },
+  
+  dropzone:     { border: '2px dashed var(--border)', borderRadius: 14, padding: '2rem', textAlign: 'center', background: 'var(--surface2)' },
   loading:      { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'var(--muted)', background: 'var(--bg)' },
-  ghostBtn:     { background: 'none', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 6, fontSize: 9, fontWeight: 800, color: 'var(--muted)', cursor: 'pointer' },
-  empty:        { textAlign: 'center', padding: '1rem', color: 'var(--muted)', fontSize: 12 }
+  ghostBtn:     { background: 'none', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 800, color: 'var(--muted)' },
+  emptyText:    { fontSize: 12, color: 'var(--muted)', textAlign: 'center', padding: '1rem' }
 }
