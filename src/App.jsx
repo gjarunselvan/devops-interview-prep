@@ -16,46 +16,10 @@ export default function App() {
   const [sessionId, setSessionId] = useState(null)
   const [loading,   setLoading]   = useState(true)
 
-  // Check for existing session on load
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
-        setUser(session.user)
-        setProfile(profile)
-
-        // Check for incomplete session
-        const { data: incompleteArr } = await supabase
-          .from('sessions')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .eq('completed', false)
-          .order('created_at', { ascending: false })
-          .limit(1)
-
-        const incomplete = incompleteArr?.[0]
-
-        if (incomplete?.history?.length > 0) {
-          // Ask user if they want to resume
-          const resume = window.confirm(`You have an unfinished session (${incomplete.history.length} questions answered). Resume it?`)
-          if (resume) {
-            setConfig({
-              level: { id: incomplete.level, label: incomplete.level, tag: incomplete.level },
-              topics: [],
-              topicList: incomplete.topics,
-              mode: incomplete.mode,
-              sessionType: incomplete.total_questions ? 'questions' : 'time',
-              totalQ: incomplete.total_questions,
-              timeTarget: 30,
-            })
-            setHistory(incomplete.history)
-            setSessionId(incomplete.id)
-            setScreen(SCREENS.INTERVIEW)
-            setLoading(false)
-            return
-          }
-        }
-        setScreen(SCREENS.SETUP)
+        await loadUserAndGo(session.user)
       }
       setLoading(false)
     })
@@ -65,9 +29,62 @@ export default function App() {
     })
   }, [])
 
-  async function handleAuth(user, profile) {
-    setUser(user)
-    setProfile(profile)
+  async function loadUserAndGo(authUser) {
+    // Get or auto-create profile
+    let { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle()
+
+    if (!profile) {
+      const username = authUser.email.split('@')[0]
+      const { data: newProfile } = await supabase
+        .from('profiles')
+        .insert({ id: authUser.id, username, full_name: username })
+        .select()
+        .single()
+      profile = newProfile
+    }
+
+    setUser(authUser)
+    setProfile(profile || { full_name: authUser.email, username: authUser.email })
+
+    // Check for incomplete session
+    const { data: incompleteArr } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('user_id', authUser.id)
+      .eq('completed', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    const incomplete = incompleteArr?.[0]
+
+    if (incomplete?.history?.length > 0) {
+      const resume = window.confirm(`You have an unfinished session (${incomplete.history.length} questions answered). Resume it?`)
+      if (resume) {
+        setConfig({
+          level: { id: incomplete.level, label: incomplete.level, tag: incomplete.level },
+          topics: [],
+          topicList: incomplete.topics,
+          mode: incomplete.mode,
+          sessionType: incomplete.total_questions ? 'questions' : 'time',
+          totalQ: incomplete.total_questions,
+          timeTarget: 30,
+        })
+        setHistory(incomplete.history)
+        setSessionId(incomplete.id)
+        setScreen(SCREENS.INTERVIEW)
+        return
+      }
+    }
+    setScreen(SCREENS.SETUP)
+  }
+
+  async function handleAuth(authUser, profile) {
+    setUser(authUser)
+    setProfile(profile || { full_name: authUser.email, username: authUser.email })
     setScreen(SCREENS.SETUP)
   }
 
@@ -75,7 +92,6 @@ export default function App() {
     setConfig(cfg)
     setHistory([])
 
-    // Create session in Supabase
     const { data } = await supabase.from('sessions').insert({
       user_id:         user.id,
       topics:          cfg.topicList,
@@ -97,12 +113,8 @@ export default function App() {
       ? Math.round((newHistory.reduce((a, b) => a + b.score, 0) / newHistory.length) * 10) / 10
       : 0
     const allImprove = [...new Set(newHistory.flatMap(h => h.improvePoints || []))].filter(Boolean)
-
     await supabase.from('sessions').update({
-      history:        newHistory,
-      improve_points: allImprove,
-      avg_score:      avgScore,
-      completed,
+      history, improve_points: allImprove, avg_score: avgScore, completed,
     }).eq('id', sessionId)
   }
 
@@ -122,21 +134,13 @@ export default function App() {
 
   return (
     <>
-      {screen === SCREENS.AUTH     && <Auth onAuth={handleAuth} />}
-      {screen === SCREENS.SETUP    && <Setup profile={profile} onStart={handleStart} onLogout={handleLogout} />}
+      {screen === SCREENS.AUTH      && <Auth onAuth={handleAuth} />}
+      {screen === SCREENS.SETUP     && <Setup profile={profile} onStart={handleStart} onLogout={handleLogout} />}
       {screen === SCREENS.INTERVIEW && config && (
-        <Interview
-          config={config}
-          profile={profile}
-          onComplete={handleComplete}
-          onSaveSession={handleSaveSession}
-        />
+        <Interview config={config} profile={profile} onComplete={handleComplete} onSaveSession={handleSaveSession} />
       )}
-      {screen === SCREENS.REPORT   && config && (
-        <Report
-          history={history}
-          config={config}
-          profile={profile}
+      {screen === SCREENS.REPORT    && config && (
+        <Report history={history} config={config} profile={profile}
           onRestart={() => setScreen(SCREENS.SETUP)}
           onGoHome={() => setScreen(SCREENS.SETUP)}
         />
