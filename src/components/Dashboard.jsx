@@ -12,6 +12,12 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
   const [analyzing, setAnalyzing] = useState(false)
   const [generating, setGenerating] = useState(false)
 
+  const SKILL_ICONS = {
+    'AWS': '☁️', 'Kubernetes': '☸️', 'Terraform': '🏗️', 'Ansible': '⚙️', 'Linux': '🐧',
+    'CI/CD': '🔄', 'Jenkins': '🏺', 'Prometheus': '🔥', 'Grafana': '📊', 'Splunk': '📋',
+    'ELK Stack': '🪵', 'DevSecOps': '🔐', 'Docker': '🐳', 'GCP': '🔵', 'Azure': '🟦'
+  };
+
   useEffect(() => { 
     if (profile?.id) loadDashboardData() 
   }, [profile?.id])
@@ -74,14 +80,14 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
 
   function handleSurpriseMe() {
     const mixedConfig = {
-      level: { tag: profile.experience_level || 'Mid-Level', label: profile.experience_level || 'Mid-Level' },
+      level: { tag: profile.experience_level || 'Senior', label: profile.experience_level || 'Senior' },
       topics: [], 
-      topicList: 'Full DevOps Stack (Mixed Domains)',
+      topicList: 'Surprise Mix (Hard Mode)',
       mode: 'text',
       sessionType: 'questions',
       totalQ: 10,
       studyTime: profile.study_daily_mins || 60,
-      interviewType: 'mixed',
+      interviewType: 'surprise',
       difficulty: 'hard'
     }
     onStartSession(mixedConfig)
@@ -188,11 +194,11 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
                   </div>
                   
                   <div style={{ marginTop: 24 }}>
-                    <div style={s.smallLabel}>EXTRACTED SKILL SET</div>
+                    <div style={s.smallLabel}>CORE TECH STACK</div>
                     <div style={s.skillCloud}>
                       {meta.skills?.slice(0, 15).map((sk, i) => (
                         <div key={i} style={s.proSkill}>
-                          <span style={s.skillDot} />
+                          <span style={{ fontSize: 16 }}>{SKILL_ICONS[sk] || SKILL_ICONS[sk.split(' ')[0]] || '🛠️'}</span>
                           {sk}
                         </div>
                       ))}
@@ -222,7 +228,7 @@ const s = {
   logo:         { width: 32, height: 32, background: 'var(--primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12 },
   navTitle:     { fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.02em' },
   navRight:     { display: 'flex', alignItems: 'center', gap: 15 },
-  navLinkBtn:   { background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: 'var(--text2)' },
+  navLinkBtn:   { background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: 'var(--text2)' },
   themeToggle:  { background: 'var(--surface2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer' },
   avatar:       { width: 32, height: 32, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: 12 },
   navName:      { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
@@ -250,7 +256,7 @@ const s = {
   surpriseBtn:  { flex: 1, padding: '10px 20px', background: 'linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)', color: '#fff', borderRadius: 12, fontSize: 13, fontWeight: 800, border: 'none', cursor: 'pointer' },
   reBtn:        { padding: '10px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: 'pointer' },
   roadmapScroll: { display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem' },
-  roadmapDay:   { minWidth: 200, borderLeft: '2px solid var(--primary-l)', paddingLeft: 14 },
+  roadmapDay:   { minWidth: 200, borderLeft: '3px solid var(--primary-l)', paddingLeft: 14 },
   dayTitle:     { fontSize: 10, fontWeight: 900, color: 'var(--primary)', marginBottom: 10, textTransform: 'uppercase' },
   taskItem:     { background: 'var(--surface2)', padding: '10px', borderRadius: 8, marginBottom: 8, transition: 'all 0.2s' },
   taskName:     { fontSize: 11, fontWeight: 800, color: 'var(--text2)' },
