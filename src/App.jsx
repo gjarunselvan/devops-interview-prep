@@ -38,21 +38,6 @@ export default function App() {
     })
   }, [envMissing])
 
-
-  // ABSOLUTE THEME SYNC
-  useEffect(() => {
-    console.log('Final applying theme to body:', theme)
-    document.body.setAttribute('data-theme', theme)
-    document.documentElement.setAttribute('data-theme', theme) // Set both for safety
-    localStorage.setItem('theme', theme)
-    if (bgColor) {
-      document.documentElement.style.setProperty('--bg', bgColor)
-      localStorage.setItem('bg_color', bgColor)
-    } else {
-      document.documentElement.style.removeProperty('--bg')
-    }
-  }, [theme, bgColor])
-
   async function loadUserAndGo(authUser) {
     if (!authUser?.id) return
     let { data: prof } = await supabase.from('profiles').select('*').eq('id', authUser.id).maybeSingle()
@@ -73,12 +58,16 @@ export default function App() {
   }
 
   async function handlePersonalize(newTheme, newColor) {
-    console.log('Toggling theme to:', newTheme)
-    setTheme(newTheme); setBgColor(newColor)
-    setProfile(prev => ({ ...prev, metadata: { ...(prev?.metadata || {}), theme: newTheme, bg_color: newColor } }))
+    console.log('Toggle theme action:', newTheme)
+    setTheme(newTheme); setBgColor(newColor || '')
+    localStorage.setItem('theme', newTheme)
+    
+    if (profile) {
+      setProfile(prev => ({ ...prev, metadata: { ...(prev?.metadata || {}), theme: newTheme, bg_color: newColor || '' } }))
+    }
     if (user?.id) {
       const { data } = await supabase.from('profiles').select('metadata').eq('id', user.id).maybeSingle()
-      const updatedMeta = { ...(data?.metadata || {}), theme: newTheme, bg_color: newColor }
+      const updatedMeta = { ...(data?.metadata || {}), theme: newTheme, bg_color: newColor || '' }
       await supabase.from('profiles').update({ metadata: updatedMeta }).eq('id', user.id)
     }
   }
@@ -112,13 +101,30 @@ export default function App() {
     setScreen(SCREENS.REPORT)
   }
 
+  // DYNAMIC STYLE ENGINE
+  const isDark = theme === 'dark'
+  const currentBg = (isDark || !bgColor) ? (isDark ? '#0b0f1a' : '#f0f4f8') : bgColor
+  const themeStyles = `
+    :root {
+      --bg: ${currentBg};
+      --surface: ${isDark ? '#151b2d' : '#ffffff'};
+      --surface2: ${isDark ? '#1e263c' : '#f8fafc'};
+      --border: ${isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0'};
+      --border2: ${isDark ? 'rgba(255,255,255,0.1)' : '#cbd5e1'};
+      --text: ${isDark ? '#f1f5f9' : '#0f172a'};
+      --text2: ${isDark ? '#94a3b8' : '#334155'};
+      --muted: ${isDark ? '#64748b' : '#64748b'};
+      --primary-l: ${isDark ? 'rgba(37, 99, 235, 0.1)' : '#eff6ff'};
+    }
+    body { background-color: var(--bg); color: var(--text); transition: background 0.2s ease, color 0.2s ease; }
+  `
+
   if (envMissing) {
     return (
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 20 }}>
+        <style>{themeStyles}</style>
         <h1 style={{ color: 'var(--red)', marginBottom: 10 }}>Missing API Keys</h1>
-        <p style={{ maxWidth: 500, color: 'var(--text2)', lineHeight: 1.6 }}>
-          It looks like your Supabase credentials are missing. If you are on Vercel, please add <strong>VITE_SUPABASE_URL</strong> and <strong>VITE_SUPABASE_ANON_KEY</strong> to your Environment Variables and redeploy.
-        </p>
+        <p style={{ maxWidth: 500, color: 'var(--text2)', lineHeight: 1.6 }}>Check .env configuration.</p>
       </div>
     )
   }
@@ -127,6 +133,7 @@ export default function App() {
 
   return (
     <div className="app-main">
+      <style>{themeStyles}</style>
       {screen === SCREENS.AUTH      && <Auth onAuth={loadUserAndGo} />}
       {screen === SCREENS.DASHBOARD && profile && (
         <Dashboard profile={profile} theme={theme} bgColor={bgColor} 
