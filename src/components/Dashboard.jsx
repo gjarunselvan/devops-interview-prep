@@ -5,7 +5,7 @@ import mammoth from 'mammoth'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
 
-export default function Dashboard({ profile, onStartSession, onLogout, theme, bgColor, onPersonalize, onViewReport, sidebarOpen, onToggleSidebar }) {
+export default function Dashboard({ profile, onStartSession, onLogout, theme, bgColor, onPersonalize, onViewReport }) {
   const [sessions, setSessions] = useState([])
   const [roadmap, setRoadmap] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -34,7 +34,6 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
       } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         const arrayBuffer = await file.arrayBuffer(); const result = await mammoth.extractRawText({ arrayBuffer }); text = result.value
       } else { alert('PDF/DOCX only'); setAnalyzing(false); return }
-      if (!text.trim()) throw new Error('Empty file')
       const res = await fetch('/api/analyze-resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resumeText: text }) })
       const data = await res.json()
       if (data.result) {
@@ -56,194 +55,168 @@ export default function Dashboard({ profile, onStartSession, onLogout, theme, bg
   }
 
   const avgScore = sessions.length > 0 ? (sessions.reduce((acc, s) => acc + (s.avg_score || 0), 0) / sessions.length).toFixed(1) : '0.0'
-  const improveHistory = sessions.flatMap(s => (s.improve_points || []).map(p => ({ text: p, date: new Date(s.created_at).toLocaleDateString(), sessionData: s }))).slice(0, 12)
+  const improveHistory = sessions.flatMap(s => (s.improve_points || []).map(p => ({ text: p, date: new Date(s.created_at).toLocaleDateString(), sessionData: s }))).slice(0, 8)
   const suggestedCourses = profile?.metadata?.suggestedCourses || []
 
-  if (loading) return <div style={s.loading}>Loading Engine...</div>
+  if (loading) return <div style={s.loading}>Loading Dashboard...</div>
 
   return (
     <div style={s.page}>
-      {sidebarOpen && <div style={s.overlay} onClick={onToggleSidebar} />}
-      <aside style={{ ...s.sidebar, transform: `translateX(${sidebarOpen ? '0' : '-100%'})` }}>
-        <div style={s.sidebarHeader}><div style={s.logoSmall}>DI</div><span style={s.logoText}>DevOps Prep</span></div>
-        <div style={s.sidebarNav}>
-          <button style={{ ...s.navItem, ...s.navItemActive }}>📊 Dashboard</button>
-          <button style={s.navItem} onClick={onStartSession}>🚀 New Interview</button>
+      {/* Navbar - EXACTLY AS PER PYCHARM PROJECT */}
+      <nav style={s.nav}>
+        <div style={s.navBrand}>
+          <div style={s.logo}>DI</div>
+          <span style={s.navTitle}>DevOps Interview</span>
         </div>
-        <div style={s.sidebarPersonalization}>
-          <div style={s.sidebarLabel}>PERSONALIZATION</div>
-          <div style={s.themePicker}>
-            <button style={s.themeIcon} onClick={() => onPersonalize('light', bgColor)}>☀️</button>
-            <button style={s.themeIcon} onClick={() => onPersonalize('dark', bgColor)}>🌙</button>
-            <button style={s.themeIcon} onClick={() => onPersonalize('oled', bgColor)}>📱</button>
-          </div>
-          <input type="color" value={bgColor || '#f8fafc'} onChange={e => onPersonalize(theme, e.target.value)} style={s.miniColor} />
+        <div style={s.navRight}>
+          <div style={s.avatar}>{profile?.full_name?.[0] || 'U'}</div>
+          <span style={s.navName}>{profile?.full_name}</span>
+          <button style={s.logoutBtn} onClick={onLogout}>Sign out</button>
         </div>
-        <div style={s.sidebarFooter}>
-          <div style={s.userMini}>
-            <div style={s.userAvatar}>{profile.full_name[0]}</div>
-            <div style={s.userInfo}><div style={s.userName}>{profile.full_name.split(' ')[0]}</div><div style={s.userLevel}>Lvl {profile.level || 1}</div></div>
-          </div>
-          <button style={s.logoutBtn} onClick={onLogout}>Sign Out</button>
-        </div>
-      </aside>
+      </nav>
 
-      <main style={s.main}>
-        <header style={s.topHeader}>
-          <div style={s.headerLeft}><button style={s.menuBtn} onClick={onToggleSidebar}>☰</button><h1 style={s.mainTitle}>Ready for your interview, <span style={{ color: 'var(--primary)' }}>{profile.full_name.split(' ')[0]}?</span></h1></div>
-          <button style={s.primaryBtn} onClick={onStartSession}>Launch Session</button>
-        </header>
+      <div style={s.content}>
+        <div style={s.hero}>
+          <h2 style={s.heroTitle}>Welcome back, <span style={{ color: 'var(--primary)' }}>{profile?.full_name?.split(' ')[0]}!</span></h2>
+          <p style={s.heroSub}>Track your progress and launch your next interview simulation.</p>
+        </div>
 
-        <div style={s.bentoGrid}>
-          {/* Performance Widget */}
-          <div style={{ ...s.proCard, gridRow: 'span 1' }}>
-            <div style={s.cardHeader}><span style={s.cardTitle}>01 PERFORMANCE</span><span style={s.cardBadge}>LIVE</span></div>
-            <div style={s.statsRow}>
-              <div style={s.statBox}><div style={s.statValue}>{avgScore}</div><div style={s.statLabel}>AVG SCORE</div></div>
-              <div style={s.statBox}><div style={s.statValue}>{sessions.length}</div><div style={s.statLabel}>SESSIONS</div></div>
+        <div style={s.grid}>
+          {/* Left Column */}
+          <div>
+            {/* Performance */}
+            <div style={s.card}>
+              <div style={s.cardTitle}>Performance Overview</div>
+              <div style={s.statsRow}>
+                <div style={s.statBox}>
+                  <div style={s.statVal}>{avgScore}</div>
+                  <div style={s.statLabel}>AVG SCORE</div>
+                </div>
+                <div style={s.statBox}>
+                  <div style={s.statVal}>{sessions.length}</div>
+                  <div style={s.statLabel}>SESSIONS</div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Player Identity */}
-          <div style={{ ...s.proCard, background: 'linear-gradient(135deg, #1e293b, #0f172a)', color: '#fff' }}>
-            <div style={s.cardHeader}><span style={{ ...s.cardTitle, color: '#fff' }}>02 CAREER RANK</span><div style={s.streakBadge}>🔥 {profile.streak || 1} DAYS</div></div>
-            <div style={s.rankInfo}>
-              <div style={s.rankLabel}>LVL {profile.level || 1} <span style={{ float: 'right' }}>{profile.xp || 0} XP</span></div>
-              <div style={s.xpBarFull}><div style={{ ...s.xpBarFill, width: `${((profile.xp || 0) % 500) / 5}%` }} /></div>
+            {/* Rank / XP */}
+            <div style={{ ...s.card, background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)', color: '#fff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>CAREER RANK</span>
+                <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.2)', padding: '3px 8px', borderRadius: 4 }}>🔥 {profile.streak || 1} DAYS</span>
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800 }}>Level {profile.level || 1}</div>
+              <div style={{ fontSize: 12, marginTop: 4, opacity: 0.8 }}>{profile.xp || 0} Total XP</div>
+              <div style={s.xpBar}><div style={{ ...s.xpFill, width: `${((profile.xp || 0) % 500) / 5}%` }} /></div>
             </div>
-          </div>
 
-          {/* Roadmap - Large Area */}
-          <div style={{ ...s.proCard, gridColumn: 'span 2', gridRow: 'span 2' }}>
-            <div style={s.cardHeader}><span style={s.cardTitle}>03 TECHNICAL ROADMAP</span><button style={s.ghostBtn} onClick={handleGenerateRoadmap} disabled={generating}>REFRESH</button></div>
-            {roadmap ? (
-              <div style={s.roadmapScroll}>
-                {roadmap.days.map((d, i) => (
-                  <div key={i} style={s.roadmapDay}>
-                    <div style={s.dayTitle}>{d.day}</div>
-                    {d.tasks.map((t, ti) => (
-                      <div key={ti} style={s.taskItem}>
-                        <div style={s.taskCircle} />
-                        <div style={s.taskDetails}>
-                          <div style={s.taskName}>{t.title}</div>
-                          <div style={s.taskMeta}><span style={s.taskDur}>{t.duration}</span> {t.resourceLink && <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.taskLink}>RESOURCE</a>}</div>
-                        </div>
-                      </div>
-                    ))}
+            {/* Improvements */}
+            <div style={s.card}>
+              <div style={s.cardTitle}>Focus Areas</div>
+              <div style={s.improveList}>
+                {improveHistory.map((item, i) => (
+                  <div key={i} style={s.improveItem} onClick={() => onViewReport(item.sessionData)}>
+                    <div>
+                      <div style={s.improveText}>{item.text}</div>
+                      <div style={s.improveDate}>{item.date}</div>
+                    </div>
+                    <span style={{ color: 'var(--primary)', fontWeight: 800 }}>→</span>
                   </div>
                 ))}
+                {improveHistory.length === 0 && <p style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center' }}>Complete sessions to see results.</p>}
               </div>
-            ) : <div style={s.emptyState}>No active roadmap.</div>}
+            </div>
           </div>
 
-          {/* Improvements */}
-          <div style={{ ...s.proCard, gridRow: 'span 2' }}>
-            <div style={s.cardHeader}><span style={s.cardTitle}>04 FOCUS AREAS</span></div>
-            <div style={s.improveList}>
-              {improveHistory.map((item, i) => (
-                <div key={i} style={s.improveItem} onClick={() => onViewReport(item.sessionData)}>
-                  <div style={s.improveInfo}><div style={s.improveText}>{item.text}</div><div style={s.improveDate}>{item.date}</div></div>
-                  <span style={s.improveIcon}>→</span>
+          {/* Right Column */}
+          <div>
+            <button style={s.startBtn} onClick={onStartSession}>🚀 Start New Interview</button>
+
+            {/* Roadmap */}
+            <div style={s.card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={s.cardTitle}>Technical Roadmap</div>
+                <button style={s.ghostBtn} onClick={handleGenerateRoadmap} disabled={generating}>{generating ? '...' : 'Refresh'}</button>
+              </div>
+              {roadmap ? (
+                <div style={s.roadmapStack}>
+                  {roadmap.days.map((d, i) => (
+                    <div key={i} style={s.roadmapDay}>
+                      <div style={s.dayTitle}>{d.day}</div>
+                      {d.tasks.map((t, ti) => (
+                        <div key={ti} style={s.taskItem}>
+                          <div style={s.taskName}>{t.title}</div>
+                          <div style={s.taskDur}>{t.duration}</div>
+                          {t.resourceLink && <a href={t.resourceLink} target="_blank" rel="noreferrer" style={s.taskLink}>Resource →</a>}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
                 </div>
-              ))}
-              {improveHistory.length === 0 && <div style={s.emptyState}>No weak points recorded.</div>}
+              ) : <p style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center' }}>No roadmap generated.</p>}
             </div>
-          </div>
 
-          {/* Resume Upload */}
-          <div style={s.proCard}>
-            <div style={s.cardHeader}><span style={s.cardTitle}>05 RESUME ENGINE</span></div>
-            <div style={s.dropzone}>
-              <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} style={s.fileInput} id="res-up" />
-              <label htmlFor="res-up" style={s.dropLabel}>
-                <span style={s.dropIcon}>{analyzing ? '⏳' : '📁'}</span>
-                <div style={s.dropText}>{analyzing ? 'ANALYZING...' : 'UPDATE PROFILE'}</div>
-              </label>
+            {/* Resume */}
+            <div style={s.card}>
+              <div style={s.cardTitle}>Resume Analysis</div>
+              <div style={s.dropzone}>
+                <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} style={{ display: 'none' }} id="res-up" />
+                <label htmlFor="res-up" style={{ cursor: 'pointer' }}>
+                  <div style={{ fontSize: 24, marginBottom: 8 }}>{analyzing ? '⏳' : '📁'}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{analyzing ? 'Analyzing...' : 'Update Resume'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Tailor your roadmap to your skills</div>
+                </label>
+              </div>
+              {suggestedCourses.length > 0 && (
+                <div style={{ marginTop: 16, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {suggestedCourses.slice(0, 3).map((c, i) => <span key={i} style={s.courseTag}>{c}</span>)}
+                </div>
+              )}
             </div>
-            {suggestedCourses.length > 0 && <div style={s.courseTags}>{suggestedCourses.slice(0, 3).map((c, i) => <span key={i} style={s.courseTag}>{c}</span>)}</div>}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   )
 }
 
 const s = {
-  page: { minHeight: '100vh', background: 'var(--bg)', display: 'flex' },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 },
-  sidebar: { width: 'var(--sidebar-w)', minWidth: 260, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '1rem', position: 'fixed', height: '100vh', zIndex: 100, transition: 'transform 0.3s ease' },
-  sidebarHeader: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: '2rem', padding: '0 0.5rem' },
-  logoSmall: { width: 28, height: 28, background: 'var(--primary)', color: '#fff', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 12 },
-  logoText: { fontWeight: 900, fontSize: 15, color: 'var(--text)', letterSpacing: '-0.02em' },
-  sidebarNav: { display: 'flex', flexDirection: 'column', gap: 4, flex: 1 },
-  navItem: { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, fontSize: 13, fontWeight: 700, color: 'var(--muted)', background: 'none', textAlign: 'left' },
-  navItemActive: { background: 'var(--primary-l)', color: 'var(--primary)' },
-  sidebarPersonalization: { padding: '1rem 0.5rem', borderTop: '1px solid var(--border)', marginBottom: '1rem' },
-  sidebarLabel: { fontSize: 9, fontWeight: 900, color: 'var(--muted)', marginBottom: 10, letterSpacing: '0.05em' },
-  themePicker: { display: 'flex', gap: 6, marginBottom: 10 },
-  themeIcon: { width: 28, height: 28, borderRadius: 6, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 },
-  miniColor: { width: '100%', height: 20, border: 'none', borderRadius: 4, cursor: 'pointer' },
-  sidebarFooter: { borderTop: '1px solid var(--border)', paddingTop: '1rem' },
-  userMini: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: '0.75rem' },
-  userAvatar: { width: 32, height: 32, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 12 },
-  userInfo: { flex: 1 },
-  userName: { fontSize: 13, fontWeight: 800, color: 'var(--text)' },
-  userLevel: { fontSize: 10, color: 'var(--primary)', fontWeight: 800 },
-  logoutBtn: { width: '100%', padding: '6px', borderRadius: 6, fontSize: 11, fontWeight: 800, background: 'var(--surface2)', color: 'var(--red)' },
-  
-  main: { flex: 1, marginLeft: 'var(--sidebar-w)', padding: '1.5rem 2rem', maxWidth: '100vw' },
-  topHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
-  headerLeft: { display: 'flex', alignItems: 'center', gap: '1rem' },
-  menuBtn: { fontSize: '1.25rem', background: 'none', display: 'none' },
-  mainTitle: { fontSize: '1.5rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em' },
-  primaryBtn: { background: 'var(--primary)', color: '#fff', padding: '10px 18px', borderRadius: 10, fontWeight: 800, fontSize: 12, boxShadow: '0 4px 12px var(--primary-glow)' },
-  
-  bentoGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', width: '100%' },
-  proCard: { background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', padding: '1.25rem', display: 'flex', flexDirection: 'column' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' },
-  cardTitle: { fontSize: 9, fontWeight: 900, color: 'var(--muted)', letterSpacing: '0.1em' },
-  cardBadge: { fontSize: 8, fontWeight: 900, color: 'var(--green)', background: 'var(--green-l)', padding: '2px 6px', borderRadius: 4 },
-  
-  statsRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-around', flex: 1 },
-  statBox: { textAlign: 'center' },
-  statValue: { fontSize: '2.25rem', fontWeight: 900, color: 'var(--text)', fontFamily: '"JetBrains Mono", monospace' },
-  statLabel: { fontSize: 9, color: 'var(--muted)', fontWeight: 800, marginTop: 4 },
-  
-  streakBadge: { fontSize: 8, fontWeight: 900, background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', padding: '2px 6px', borderRadius: 4 },
-  rankInfo: { marginTop: '0.25rem' },
-  rankLabel: { fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', marginBottom: 4 },
-  xpBarFull: { height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' },
-  xpBarFill: { height: '100%', background: 'var(--primary)', boxShadow: '0 0 8px var(--primary)' },
-  
-  roadmapScroll: { display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' },
-  roadmapDay: { minWidth: 180, flexShrink: 0 },
-  dayTitle: { fontSize: 10, fontWeight: 900, color: 'var(--primary)', marginBottom: '0.75rem' },
-  taskItem: { display: 'flex', gap: 8, marginBottom: '0.75rem' },
-  taskCircle: { width: 6, height: 6, borderRadius: '50%', border: '1.5px solid var(--primary)', marginTop: 4, flexShrink: 0 },
-  taskDetails: { flex: 1 },
-  taskName: { fontSize: 11, fontWeight: 800, color: 'var(--text)', marginBottom: 2 },
-  taskMeta: { display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 700 },
-  taskDur: { color: 'var(--muted)' },
-  taskLink: { color: 'var(--primary)' },
-  
-  improveList: { display: 'flex', flexDirection: 'column', gap: 6 },
-  improveItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'var(--surface2)', borderRadius: 8, cursor: 'pointer' },
-  improveInfo: { flex: 1 },
-  improveText: { fontSize: 11, fontWeight: 800, color: 'var(--text2)', marginBottom: 2 },
-  improveDate: { fontSize: 8, color: 'var(--muted)', fontWeight: 700 },
-  improveIcon: { fontSize: 10, color: 'var(--primary)', fontWeight: 900 },
-  
-  dropzone: { border: '1.5px dashed var(--border2)', borderRadius: 10, padding: '1rem', textAlign: 'center', cursor: 'pointer', background: 'var(--surface2)' },
-  fileInput: { display: 'none' },
-  dropLabel: { cursor: 'pointer' },
-  dropIcon: { fontSize: '1.25rem', marginBottom: 4, display: 'block' },
-  dropText: { fontSize: 11, fontWeight: 800, color: 'var(--text)' },
-  courseTags: { display: 'flex', gap: 4, marginTop: '1rem', flexWrap: 'wrap' },
-  courseTag: { fontSize: 8, fontWeight: 900, background: 'var(--primary-l)', color: 'var(--primary)', padding: '2px 8px', borderRadius: 4 },
-  
-  loading: { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--muted)', fontSize: 12, fontWeight: 800 },
-  ghostBtn: { background: 'none', border: '1px solid var(--border)', padding: '4px 8px', borderRadius: 4, fontSize: 9, fontWeight: 900, color: 'var(--muted)' },
-  emptyState: { padding: '1rem', textAlign: 'center', color: 'var(--muted)', fontSize: 11 }
+  page:         { minHeight: '100vh', background: 'var(--bg)' },
+  nav:          { background: '#fff', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 },
+  navBrand:     { display: 'flex', alignItems: 'center', gap: 10 },
+  logo:         { width: 36, height: 36, background: 'var(--primary)', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 14 },
+  navTitle:     { fontWeight: 700, fontSize: 16, color: 'var(--text)' },
+  navRight:     { display: 'flex', alignItems: 'center', gap: 12 },
+  avatar:       { width: 34, height: 34, background: 'var(--primary-l)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 700, fontSize: 14 },
+  navName:      { fontSize: 14, fontWeight: 500, color: 'var(--text2)' },
+  logoutBtn:    { padding: '6px 14px', border: '1.5px solid var(--border)', borderRadius: 7, background: '#fff', color: 'var(--muted)', fontSize: 13, fontWeight: 500, cursor: 'pointer' },
+  content:      { maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem' },
+  hero:         { marginBottom: '2rem' },
+  heroTitle:    { fontSize: 26, fontWeight: 800, color: 'var(--text)' },
+  heroSub:      { fontSize: 15, color: 'var(--muted)', marginTop: 4 },
+  grid:         { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' },
+  card:         { background: '#fff', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: 'var(--shadow)' },
+  cardTitle:    { fontSize: 14, fontWeight: 800, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 },
+  statsRow:     { display: 'flex', justifyContent: 'space-around', textAlign: 'center' },
+  statBox:      { flex: 1 },
+  statVal:      { fontSize: 32, fontWeight: 800, color: 'var(--primary)', fontFamily: 'JetBrains Mono,monospace' },
+  statLabel:    { fontSize: 10, fontWeight: 700, color: 'var(--muted)', marginTop: 4 },
+  xpBar:        { height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 12, overflow: 'hidden' },
+  xpFill:       { height: '100%', background: '#fff' },
+  improveList:  { display: 'flex', flexDirection: 'column', gap: 10 },
+  improveItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--surface2)', borderRadius: 8, cursor: 'pointer' },
+  improveText:  { fontSize: 13, fontWeight: 700, color: 'var(--text2)' },
+  improveDate:  { fontSize: 10, color: 'var(--muted)', marginTop: 2 },
+  startBtn:     { width: '100%', padding: '16px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 800, cursor: 'pointer', marginBottom: '1.5rem', boxShadow: '0 4px 12px rgba(37,99,235,0.3)' },
+  roadmapStack: { display: 'flex', flexDirection: 'column', gap: 16 },
+  roadmapDay:   { borderLeft: '2px solid var(--primary-l)', paddingLeft: 14 },
+  dayTitle:     { fontSize: 12, fontWeight: 800, color: 'var(--primary)', marginBottom: 8 },
+  taskItem:     { marginBottom: 8 },
+  taskName:     { fontSize: 13, fontWeight: 600, color: 'var(--text2)' },
+  taskDur:      { fontSize: 11, color: 'var(--muted)' },
+  taskLink:     { fontSize: 11, color: 'var(--primary)', fontWeight: 700 },
+  dropzone:     { border: '1.5px dashed var(--border2)', borderRadius: 10, padding: '1.5rem', textAlign: 'center', background: 'var(--surface2)' },
+  courseTag:    { fontSize: 10, fontWeight: 700, background: 'var(--primary-l)', color: 'var(--primary)', padding: '4px 10px', borderRadius: 5 },
+  loading:      { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--muted)', fontWeight: 600 },
+  ghostBtn:     { background: 'none', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }
 }
-
-if (typeof window !== 'undefined' && window.innerWidth <= 768) { s.menuBtn.display = 'block' }
