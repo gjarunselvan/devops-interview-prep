@@ -159,7 +159,7 @@ export default function Interview({ config, profile, onComplete, onSaveSession, 
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(' '));
             setVoiceUnlocked(true);
           }}>TAP TO BEGIN SESSION</button>
-          <button style={s.ghostBtn} onClick={onGoHome} style={{ marginTop: 15 }}>Return to Dashboard</button>
+          <button style={{ ...s.ghostBtn, marginTop: 15 }} onClick={onGoHome}>Return to Dashboard</button>
         </div>
       </div>
     )
