@@ -116,7 +116,7 @@ export default function Setup({ profile, onStart, onLogout, onGoBack, theme, onP
   return (
     <div style={s.page}>
       <nav style={s.nav}>
-        <div style={s.navBrand} onClick={onGoBack} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ ...s.navBrand, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }} onClick={onGoBack}>
           <div style={s.logo}>DI</div>
           <span style={s.navTitle}>DevOps Initialization</span>
         </div>
