@@ -72,7 +72,7 @@ export default async function handler(req, res) {
     })
 
     const data = await response.json()
-    if (data.error) return res.status(500).json({ result: `Error: ${data.error.message}` })
+    if (data.error) return res.status(500).json({ result: `Groq API Error: ${data.error.message}` })
     const text = data.choices?.[0]?.message?.content || 'No response.'
     res.status(200).json({ result: text })
   } catch (err) {
